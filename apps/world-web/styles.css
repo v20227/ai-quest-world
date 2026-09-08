@@ -5,7 +5,7 @@ body[data-theme] {
   --wood: #644532; --wood-dark: #2e211e; --paper: #ebd7af; --paper-hi: #f7e9ca;
   --paper-shade: #c9aa7a; --paper-ink: #3a2a25; --paper-muted: #69523d;
   --green: #6ecb9c; --red: #ee967f; --cyan: #7fd1e6; --shadow: #080d17;
-  --display: Georgia, "Times New Roman", serif;
+  --display: "Songti SC", "Noto Serif CJK SC", "SimSun", Georgia, serif;
 }
 body[data-theme="meadow"] { --panel: #183031; --panel-hi: #294442; --gold: #d8bc85; --paper: #e2d9b6; --paper-hi: #f1ebd2; --paper-shade: #bdad80; }
 * { box-sizing:border-box; }

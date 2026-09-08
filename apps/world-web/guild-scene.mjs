@@ -1,28 +1,57 @@
 import { currentQuest, recentQuests, allArtifacts } from "./view-state.mjs";
 
-const label = value => String(value ?? "Unknown").toLowerCase().replaceAll("_", " ").replace(/\b\w/g, char => char.toUpperCase());
+const DISPLAY_LABELS = {
+  research: "研究", planning: "规划", engineering: "工程", debugging: "调试", creation: "创作", automation: "自动化",
+  completed: "已完成", failed: "失败", cancelled: "已取消", active: "运行中", pending: "待处理", created: "已创建",
+  verified: "已验证", supported: "有证据支持", unverified: "未验证", unknown: "未知",
+  locked: "未解锁", dormant: "休眠", old: "待修复", restored: "已修复", idle: "空闲", busy: "忙碌",
+  returning: "归来中", milestone: "里程碑", connected: "已连接", unlocked: "已解锁",
+  observe: "观测", orient: "理解", plan: "规划", act: "执行", validate: "验证", deliver: "交付", recover: "恢复",
+  code: "代码", validation: "验证", document: "文档", file: "文件", other: "其他",
+  dusk: "暮色", meadow: "草原", first_qualifying_completion: "首次达标任务", first_verified_outcome: "首次验证成果", first_artifact: "首个真实成果",
+  depart: "出发", explore: "探索", return: "归来", candidate: "待确认", validating: "验证中",
+  workshop: "工坊", library: "图书馆"
+};
+
+export function displayLabel(value) {
+  if (value == null) return "—";
+  const key = String(value).toLowerCase();
+  return Object.hasOwn(DISPLAY_LABELS, key) ? DISPLAY_LABELS[key] : String(value);
+}
+
+const label = displayLabel;
+
+export function returnHighlightLabel(item) {
+  if (item.kind === "milestone_unlocked") return displayLabel(item.target);
+  if (item.kind === "guild_restored") return "任务公会已修复";
+  if (item.kind === "building_unlocked") return `${displayLabel(item.target)}已解锁`;
+  if (item.kind === "quest_failed") return `${item.label.replace(/ failed$/, "")} · 失败`;
+  if (item.kind === "quest_cancelled") return `${item.label.replace(/ cancelled$/, "")} · 已取消`;
+  if (item.kind === "artifact_received" && item.label === "Real artifact received") return "获得真实成果";
+  return item.label;
+}
 
 export function guildSceneModel(snapshot, selectedQuestId = null) {
   const quest = snapshot.quests.find(entry => entry.quest_id === selectedQuestId) ?? currentQuest(snapshot.quests);
   if (!quest) return {
-    questId: null, title: "Your next chapter starts here.", domain: "SMALL CAMP / HOME BASE",
-    description: "Use your connected AI tool for meaningful work. Its next observed expedition will appear here.",
-    kind: "THE NEXT CHAPTER / 下一章", facts: [], phases: [], entries: [], active: false
+    questId: null, title: "你的下一章，从这里开始。", domain: "小小营地 / 据点",
+    description: "在已连接的 AI 工具中开展有意义的工作，下一次观测到的远征会出现在这里。",
+    kind: "下一章", facts: [], phases: [], entries: [], active: false
   };
   const settled = snapshot.progressions.find(entry => entry.quest_id === quest.quest_id);
   const terminal = ["COMPLETED", "FAILED", "CANCELLED"].includes(quest.status);
-  const confidence = quest.outcome_confidence ? label(quest.outcome_confidence) : "Pending evidence";
+  const confidence = quest.outcome_confidence ? label(quest.outcome_confidence) : "等待证据";
   return {
     questId: quest.quest_id, title: quest.title, domain: `${label(quest.primary_domain)} / ${label(quest.phase)}`,
-    description: terminal ? `${label(quest.status)} · ${confidence}. The record of your real work is kept in the guild.` : "An expedition is in progress. This board follows the work observed by your local harness.",
-    kind: terminal ? "LATEST RETURN / 最近归来" : "CURRENT EXPEDITION / 当前远征",
+    description: terminal ? `${label(quest.status)} · ${confidence}。公会已保存这次真实工作的记录。` : "远征正在进行中，任务板会随本地运行环境观测到的工作更新。",
+    kind: terminal ? "最近归来" : "当前远征",
     facts: [
-      ["Outcome", confidence],
-      ["Recorded growth", settled ? `${settled.skill_xp} XP` : "Not settled"],
-      ["Real artifacts", String(allArtifacts(snapshot.progressions, snapshot.quests).filter(item => item.source_quest_id === quest.quest_id).length)]
+      ["结果", confidence],
+      ["记录成长", settled ? `${settled.skill_xp} 经验` : "尚未结算"],
+      ["真实成果", String(allArtifacts(snapshot.progressions, snapshot.quests).filter(item => item.source_quest_id === quest.quest_id).length)]
     ],
-    phases: [`Phase · ${label(quest.phase)}`, `Difficulty · ${quest.difficulty?.observed ?? quest.difficulty?.estimated ?? "Unknown"}${quest.difficulty?.observed != null || quest.difficulty?.estimated != null ? "/5" : ""}`],
-    entries: recentQuests(snapshot.quests).slice(0, 3).map(entry => ({ id: entry.quest_id, title: entry.title, detail: `${label(entry.status)} · ${entry.run_ids.length} run${entry.run_ids.length === 1 ? "" : "s"}` })),
+    phases: [`阶段 · ${label(quest.phase)}`, `难度 · ${quest.difficulty?.observed ?? quest.difficulty?.estimated ?? "未知"}${quest.difficulty?.observed != null || quest.difficulty?.estimated != null ? "/5" : ""}`],
+    entries: recentQuests(snapshot.quests).slice(0, 3).map(entry => ({ id: entry.quest_id, title: entry.title, detail: `${label(entry.status)} · ${entry.run_ids.length} 次运行` })),
     active: snapshot.world.active_run_ids.length > 0
   };
 }
@@ -30,7 +59,7 @@ export function guildSceneModel(snapshot, selectedQuestId = null) {
 export function renderGuildScene(snapshot, root = document, selectedQuestId = null) {
   const model = guildSceneModel(snapshot, selectedQuestId);
   renderDesktopPanels(snapshot, model.questId, root);
-  for (const [id, value] of Object.entries({ "board-title": model.title, "board-domain": model.domain, "board-description": model.description, "board-kind": model.kind, "archivist-state": model.active ? "EXPEDITION IN PROGRESS" : "THE ARCHIVIST" })) root.getElementById(id).textContent = value;
+  for (const [id, value] of Object.entries({ "board-title": model.title, "board-domain": model.domain, "board-description": model.description, "board-kind": model.kind, "archivist-state": model.active ? "远征进行中" : "档案管理员" })) root.getElementById(id).textContent = value;
   const facts = root.getElementById("board-facts");
   const signature = JSON.stringify(model);
   if (facts.dataset.signature === signature) return;
@@ -52,7 +81,7 @@ export function renderGuildScene(snapshot, root = document, selectedQuestId = nu
     const detail = root.createElement("small"); detail.textContent = entry.detail;
     button.append(title, detail); return button;
   });
-  if (entries.length === 0) { const message = root.createElement("p"); message.className = "muted"; message.textContent = "A quiet guild. No expeditions have been observed yet."; entries.push(message); }
+  if (entries.length === 0) { const message = root.createElement("p"); message.className = "muted"; message.textContent = "公会静候着，尚未观测到远征。"; entries.push(message); }
   const list = root.getElementById("expedition-list");
   const focusedId = list.contains(root.activeElement) ? root.activeElement.dataset.questId : null;
   list.replaceChildren(...entries);
@@ -71,8 +100,8 @@ export function desktopGuildModel(snapshot, selectedQuestId = null) {
     quests: quests.map(quest => ({ id: quest.quest_id, title: quest.title })),
     runs: quests.flatMap(quest => quest.run_ids.map(id => ({
       id, questId: quest.quest_id, title: quest.title,
-      relationship: id === quest.root_run_id ? "Root run" : "Associated run · parent unavailable",
-      status: active.has(id) ? "Active" : "Not active · outcome in Quest"
+      relationship: id === quest.root_run_id ? "根运行" : "关联运行 · 父级信息未知",
+      status: active.has(id) ? "运行中" : "当前未运行 · 结果见任务"
     }))),
     agents: selected?.agent_ids ?? [],
     domains: GUILD_DOMAINS.map(name => ({ name, value: snapshot.world.progression_totals?.domain_progress?.[name] ?? 0 })),
@@ -101,11 +130,11 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
     const copy = element("span", "roster-copy"); copy.append(element("strong", "", run.title),element("small", "run-id", run.id),element("small", "", run.relationship),element("small", "run-state", run.status));
     button.append(portrait, copy); return button;
   });
-  host.replaceChildren(...(rows.length ? rows : [element("p", "muted", "No runs observed. Your next expedition will appear here.")]));
+  host.replaceChildren(...(rows.length ? rows : [element("p", "muted", "尚未观测到运行，下一次远征会出现在这里。")]));
   host.scrollTop = scroll;
   if (focusedRun) rows.find(row => row.dataset.selectRun === focusedRun)?.focus({ preventScroll: true });
-  root.getElementById("roster-count").textContent = `${model.runs.length} RUNS`;
-  root.getElementById("agent-identities").textContent = model.agents.length ? `Observed agents · ${model.agents.join(" · ")}` : "No Agent identities available for this Quest.";
+  root.getElementById("roster-count").textContent = `${model.runs.length} 次运行`;
+  root.getElementById("agent-identities").textContent = model.agents.length ? `已观测到的智能体 · ${model.agents.join(" · ")}` : "此任务暂无智能体身份信息。";
   const picker = root.getElementById("quest-picker");
   picker.replaceChildren(...model.quests.map(quest => { const option = element("option", "", quest.title); option.value = quest.id; return option; }));
   picker.disabled = model.quests.length === 0; picker.value = model.selectedId ?? "";
@@ -115,7 +144,7 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
     let button = [...domains.children].find(node => node.dataset.domain === domain.name);
     if (!button) {
       button = element("button", "domain-node"); button.type = "button"; button.dataset.domain = domain.name;
-      button.append(element("span", "domain-sigil", ["▤", "◇", "⌘", "⚒", "✦", "⚙"][index]), element("strong", "", domain.name), element("small", "")); domains.append(button);
+      button.append(element("span", "domain-sigil", ["▤", "◇", "⌘", "⚒", "✦", "⚙"][index]), element("strong", "", label(domain.name)), element("small", "")); domains.append(button);
     }
     button.querySelector("small").textContent = `${domain.value} / 100`;
   });
@@ -131,8 +160,8 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
     if (artifacts.children[index] !== button) artifacts.insertBefore(button, artifacts.children[index] ?? null);
   });
   [...artifacts.children].filter(node => !retained.has(node)).forEach(node => node.remove());
-  if (!retained.size) artifacts.append(element("p", "muted", "No real artifacts recorded."));
+  if (!retained.size) artifacts.append(element("p", "muted", "尚未记录真实成果。"));
   if (focused?.isConnected && focused !== root.activeElement && retained.has(focused)) focused.focus({ preventScroll: true });
   const validation = model.validation;
-  root.getElementById("board-validation").textContent = !validation?.attempted ? "Validation · No validation signal observed" : validation.latest_passed == null ? "Validation · Evidence recorded; no measured total" : `Validation · ${validation.latest_passed}/${validation.latest_total ?? "?"} passed`;
+  root.getElementById("board-validation").textContent = !validation?.attempted ? "验证 · 尚未观测到验证信号" : validation.latest_passed == null ? "验证 · 已记录证据，暂无实测总数" : `验证 · ${validation.latest_passed}/${validation.latest_total ?? "?"} 通过`;
 }
