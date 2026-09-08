@@ -174,4 +174,13 @@ test("Codex-shaped JSONL reaches the persistent World State without Game Core ch
   assert.equal(snapshot.world.workshop.state, "IDLE");
   assert.equal(snapshot.world.progression_totals.artifact_count, 1);
   assert.equal(runtime.getDiagnostics().event_count, 9);
+
+  runtime.close();
+  const reopenedRuntime = new PersistentWorldRuntime({ path: join(directory, "world.sqlite") });
+  t.after(() => reopenedRuntime.close());
+  assert.deepEqual(reopenedRuntime.getSnapshot(), snapshot);
+
+  const replayedSnapshot = await reopenedRuntime.runAdapter(adapter);
+  assert.deepEqual(replayedSnapshot, snapshot);
+  assert.equal(reopenedRuntime.getDiagnostics().event_count, 9);
 });

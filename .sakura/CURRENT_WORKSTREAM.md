@@ -1,8 +1,8 @@
-# Current Workstream: Codex CLI Adapter and v0.1 Acceptance
+# Current Workstream: AI Quest World v0.1 Delivery
 
 ## Outcome
 
-Connect a real local Codex CLI run to the existing local-first world pipeline, then close the v0.1 acceptance gate. The adapter remains a strict source boundary; the Game Core remains the only writer of building, unlock, activity, and cumulative progression state; the Web layer presents returned state and never recalculates game outcomes.
+Deliver the v0.1 local-first world pipeline. The Codex adapter remains a strict source boundary; the Game Core remains the only writer of building, unlock, activity, and cumulative progression state; the Web layer presents returned state and never recalculates game outcomes.
 
 ## Acceptance
 
@@ -45,7 +45,7 @@ Connect a real local Codex CLI run to the existing local-first world pipeline, t
 | WORLD-WEB-02 | Wire the Web endpoint to SQLite-backed read models and live Observer flow | `apps/world-web` / `storage/sqlite` | WORLD-WEB-01 | G6 live read-model checks | Complete |
 | CODEX-ADAPTER-01 | Codex CLI JSONL adapter with strict metadata-first mapping | `adapters/codex-cli` | WORLD-WEB-02 | adapter contract and privacy tests | Complete |
 | CODEX-RUNTIME-01 | Stream a Codex-shaped run through persistent runtime and World State | `apps/world-web` | CODEX-ADAPTER-01 | persistent end-to-end adapter test | Complete |
-| G8-ACCEPTANCE-01 | Execute the full v0.1 acceptance matrix and release gate | Repository | CODEX-RUNTIME-01 | `npm test` plus real local smoke | Next |
+| G8-ACCEPTANCE-01 | Execute the full v0.1 acceptance matrix and release gate | Repository | CODEX-RUNTIME-01 | `npm test` plus real local smoke | Complete |
 
 ## Repair history
 
@@ -63,6 +63,8 @@ The Web presentation slice is complete: the scene is world-first, desktop uses a
 
 The Codex adapter slice is complete: live public JSONL was checked in an isolated local smoke, source-specific events are normalized at the adapter boundary, malformed streams fail closed, and a Codex-shaped run reaches Verified Quest, artifact loot, and persistent World State without changes to Game Core.
 
+The v0.1 acceptance gate is complete: 62/62 automated tests pass, the real read-only Codex command has completed and survived SQLite restart, and the browser presentation checks remain green.
+
 ## Exact next action
 
-Run the G8 acceptance matrix, including a real local Codex observation and SQLite restart verification.
+Begin a separately scoped v0.2 product goal only after deciding which next user-visible capability has priority.

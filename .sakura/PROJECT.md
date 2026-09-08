@@ -17,8 +17,8 @@ Build a local-first, read-only observability layer for Agent Harnesses. Observab
 ## Technical baseline
 
 - The project uses dependency-free ESM JavaScript, Node's built-in test runner, and Node's built-in SQLite runtime (`node:sqlite`); Node 22.13.0 or newer is required.
-- The runtime boundaries are `packages/uarp`, `packages/adapter-core`, `adapters/first-harness`, `observer`, and `core`.
-- SQLite persistence covers the normalized UARP event store, versioned World State repository, and durable Quest/progression read models. Semantic, Quest, progression, and World State projections remain headless and renderer-independent; Web presentation and real Harness integration remain downstream.
+- The runtime boundaries are `packages/uarp`, `packages/adapter-core`, `adapters/first-harness`, `adapters/codex-cli`, `observer`, and `core`.
+- SQLite persistence covers the normalized UARP event store, versioned World State repository, and durable Quest/progression read models. Semantic, Quest, progression, and World State projections remain headless and renderer-independent; the Web presentation and read-only Codex CLI entry point consume the same persistent runtime.
 
 ## Commands
 

@@ -75,6 +75,27 @@
 - First qualifying completion, first real artifact, and first Verified outcome are persisted as unique milestone hooks.
 - Quest and progression projections survive restart, reject stale replacement, and expose a stable read-only repository boundary for the Web layer.
 
+## G6 Web World
+
+- The Web suite and browser verification passed: the world-first scene, Mini HUD, contextual panels, Artifact Card, Return Overlay, mobile drawer/navigation, theme settings, reduced-motion setting, and zero browser console errors were verified.
+- The root Web page reads SQLite-backed `/api/world`; the deterministic canonical and unverified fixtures remain explicit `/api/demo` modes.
+- A persistent Web endpoint replayed a simulated run after SQLite restart without changing the world projection.
+
+## G7 Codex CLI adapter
+
+- `CodexCliHarnessAdapter` consumes the public `codex exec --json` JSONL stream behind the existing Adapter Core boundary.
+- Capabilities and tests cover lifecycle, shell tools, recognized validation commands, file changes, artifact evidence references, usage metadata, process/stream errors, and strict privacy redaction.
+- Reasoning, agent-message text, full commands, and file paths do not cross into UARP events.
+- A local Codex CLI smoke in an isolated Git directory completed successfully through `npm run observe:codex`; the resulting SQLite database reopened with the same Quest and World State.
+- A Codex-shaped end-to-end fixture reached a Verified Quest, one artifact loot reference, Guild restoration, Workshop unlock, and persistent World State without Game Core changes.
+
+## G8 v0.1 acceptance
+
+- The full regression suite passes: `npm test` reports 62/62 tests with 0 failures.
+- Canonical, multi-agent, unverified, failed, cancellation, failure-farming, replay, restart, Web, and privacy acceptance scenarios remain covered by the test suites.
+- The real read-only Codex observation correctly produced an Unverified Quest when it performed no validation or file change; no artifact or unlock was fabricated.
+- The project root and `origin/main` are synchronized at the v0.1 delivery commit.
+
 ## Remaining verification
 
-- Persistent Quest/progression repositories, World State, Web World, and real Harness integration are intentionally not implemented in this slice.
+- No v0.1 acceptance checks remain. Further work should begin as a separately scoped v0.2 goal.
