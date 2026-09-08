@@ -89,6 +89,7 @@ tests/ai-quest-world/
 - `world-state-engine.mjs` is the authoritative deterministic projector: runtime lifecycle events control temporary Gate activity, while resolved progression controls permanent unlocks and totals.
 - `world-state-store.mjs` atomically persists one validated World State row and applied-input markers in the shared SQLite schema; duplicate events and Quest progressions are no-ops after restart.
 - `quest-store.mjs` persists the newest validated Quest and progression read models monotonically so the Web layer can restart without recalculating or becoming a second authority.
+- `apps/world-web/world-runtime.mjs` orchestrates the local Observer, event store, Semantic Engine, Quest/Progression policies, and World State repository; it exposes read models to the Web server without moving any game rules into the browser.
 
 ## Ownership
 
@@ -99,7 +100,7 @@ tests/ai-quest-world/
 - `core/semantic` will own work-semantic interpretation after Phase 1.
 - `core/game` will own Quest, outcome, reward, growth, artifact, and world state after Phase 1.
 - `storage/sqlite` will own durable repositories after Phase 1.
-- `apps/world-web` will own presentation after the authoritative state path exists. The initial Web slice serves a deterministic simulated read model through `/api/demo` so the visual contract can be verified without a live harness. The next Web item may replace the demo provider with SQLite-backed read models, but must keep the browser read-only and must not duplicate World State, Quest, or progression rules.
+- `apps/world-web` owns presentation after the authoritative state path exists. The root page reads the SQLite-backed read model through `/api/world`; `/api/demo` is an explicit deterministic fixture for visual verification. `world-runtime.mjs` is the local orchestration boundary for Observer events and keeps the browser read-only without duplicating World State, Quest, or progression rules.
 
 ## Dependency direction
 

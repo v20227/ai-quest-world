@@ -7,6 +7,8 @@ const refs = {
   panelTitle: document.querySelector("#panel-title"),
   panelContent: document.querySelector("#panel-content"),
   sceneStatus: document.querySelector("#scene-status"),
+  reloadButton: document.querySelector("#reload-demo"),
+  reloadLabel: document.querySelector("#reload-label"),
   hudQuestTitle: document.querySelector("#hud-quest-title"),
   hudQuestPhase: document.querySelector("#hud-quest-phase"),
   hudGateState: document.querySelector("#hud-gate-state"),
@@ -24,6 +26,7 @@ const ui = {
   selectedPanel: "camp",
   selectedQuestId: null,
   selectedArtifactId: null,
+  source: initialSource(),
   mode: "canonical",
   toastTimer: null
 };
@@ -62,7 +65,15 @@ function bindEvents() {
 
     const modeTrigger = event.target.closest("[data-demo-mode]");
     if (modeTrigger !== null) {
+      ui.source = "demo";
       loadSnapshot(modeTrigger.dataset.demoMode);
+      return;
+    }
+
+    const sourceTrigger = event.target.closest("[data-source]");
+    if (sourceTrigger !== null) {
+      ui.source = sourceTrigger.dataset.source;
+      loadSnapshot(ui.mode, { showReturn: ui.source === "demo" });
       return;
     }
 
@@ -77,7 +88,7 @@ function bindEvents() {
     }
 
     if (event.target.closest("#reload-demo") !== null) {
-      loadSnapshot("canonical", { showReturn: true });
+      loadSnapshot(ui.mode, { showReturn: ui.source === "demo" });
       return;
     }
 
@@ -111,7 +122,10 @@ async function loadSnapshot(mode = ui.mode, { showReturn = true } = {}) {
   }
 
   try {
-    const response = await fetch(`/api/demo?mode=${encodeURIComponent(mode)}`, { cache: "no-store" });
+    const endpoint = ui.source === "live"
+      ? "/api/world"
+      : `/api/demo?mode=${encodeURIComponent(mode)}`;
+    const response = await fetch(endpoint, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`World data returned ${response.status}`);
     }
@@ -120,7 +134,7 @@ async function loadSnapshot(mode = ui.mode, { showReturn = true } = {}) {
     setConnection("Connected", false);
     renderWorld(snapshot);
     selectPanel(ui.selectedPanel, { keepMobileOpen: false });
-    if (showReturn && snapshot.world.return_highlights.length > 0 && mode === "canonical") {
+    if (showReturn && snapshot.world.return_highlights.length > 0) {
       showReturnOverlay(snapshot);
     }
   } catch (error) {
@@ -142,6 +156,9 @@ function renderWorld(snapshot) {
   refs.hudGateState.textContent = labelize(world.gate.state);
   refs.hudQuestCount.textContent = String(quests.length);
   refs.sceneStatus.textContent = sceneStatus(world, quest);
+  const reloadLabel = ui.source === "demo" ? "Replay signal" : "Refresh world";
+  refs.reloadLabel.textContent = reloadLabel;
+  refs.reloadButton.setAttribute("aria-label", reloadLabel);
 
   for (const [building, state] of [
     ["gate", world.gate.state],
@@ -359,6 +376,7 @@ function renderChroniclePanel(snapshot) {
 }
 
 function renderSettingsPanel() {
+  const sourceLabel = ui.source === "live" ? "LOCAL WORLD" : "DEMO FIXTURE";
   return `
     <p class="panel-lede">The world is local-first and read-only. Change the visual lens without changing the underlying state.</p>
     <div class="detail-card">
@@ -371,8 +389,13 @@ function renderSettingsPanel() {
       <div class="panel-action-row"><button class="secondary-button" id="settings-motion" type="button">Toggle reduced motion</button></div>
     </div>
     <div class="detail-card">
-      <div class="evidence-head"><h3 class="evidence-title">Demo lens</h3><span class="muted-badge">FIXTURE</span></div>
-      <p class="artifact-meta">View the same world with a completed evidence-rich run or an unverified return.</p>
+      <div class="evidence-head"><h3 class="evidence-title">World source</h3><span class="muted-badge">${sourceLabel}</span></div>
+      <p class="artifact-meta">The local world reads SQLite-backed projections. The fixture lens is only for deterministic presentation checks.</p>
+      <div class="panel-action-row"><button class="secondary-button" data-source="live" type="button">Local world</button><button class="secondary-button" data-source="demo" type="button">Demo fixture</button></div>
+    </div>
+    <div class="detail-card">
+      <div class="evidence-head"><h3 class="evidence-title">Fixture outcome</h3><span class="muted-badge">DEMO</span></div>
+      <p class="artifact-meta">When the fixture lens is active, view a completed evidence-rich return or an unverified return.</p>
       <div class="panel-action-row"><button class="secondary-button" data-demo-mode="canonical" type="button">Verified return</button><button class="secondary-button" data-demo-mode="unverified" type="button">Unverified return</button></div>
     </div>
   `;
@@ -532,4 +555,8 @@ function showToast(message) {
   refs.toast.textContent = message;
   refs.toast.classList.add("is-visible");
   ui.toastTimer = window.setTimeout(() => refs.toast.classList.remove("is-visible"), 2200);
+}
+
+function initialSource() {
+  return new URLSearchParams(window.location.search).get("source") === "demo" ? "demo" : "live";
 }

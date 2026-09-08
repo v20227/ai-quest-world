@@ -12,7 +12,7 @@ Build AI Quest World v0.1 as a local-first, read-only, offline-capable observabi
 - G3: Deterministic Semantic Engine and work-phase state machine — complete.
 - G4: Quest lifecycle, outcome/evidence policy, growth, anti-abuse, and artifact references — complete.
 - G5: Persistent World State and building progression — complete.
-- G6: Web pixel world and return/unlock presentation — world-first presentation slice complete; live read-model wiring remains.
+- G6: Web pixel world and return/unlock presentation — complete.
 - G7: First real Harness Adapter behind the existing adapter boundary.
 - G8: End-to-end v0.1 acceptance.
 
@@ -69,10 +69,10 @@ Quest/outcome foundation evidence: Quest lifecycle, child/retry association, ind
 
 ## Milestone 4: Web world
 
-1. World Scene, Mini HUD, Quest Panel, Building Panel, Artifact Card, and Return Overlay — complete for the deterministic demo read model.
-2. Persistent world state and first-session moments — UI contract is in place; SQLite-backed live read-model wiring remains.
+1. World Scene, Mini HUD, Quest Panel, Building Panel, Artifact Card, and Return Overlay — complete for both local and deterministic read models.
+2. Persistent world state and first-session moments — complete through SQLite-backed `/api/world`, the Observer path, conservative empty-state rendering, and the fixture lens.
 
-G6 presentation-slice evidence: `npm test` passes 57/57; the Web contract covers canonical and unverified world snapshots, GET-only static/API serving, conservative unlock presentation, and the browser check confirms desktop scene/context layout, mobile drawer/navigation, return overlay, world-object selection, theme/motion settings, and zero browser console errors.
+G6 exit evidence: `npm test` passes 58/58; the Web contract covers canonical and unverified snapshots, GET-only static/API serving, SQLite restart/idempotent Observer projection, conservative unlock presentation, and the browser check confirms desktop scene/context layout, mobile drawer/navigation, return overlay, world-object selection, theme/motion settings, and zero browser console errors.
 
 ## Milestone 5: Real Harness Adapter and acceptance
 

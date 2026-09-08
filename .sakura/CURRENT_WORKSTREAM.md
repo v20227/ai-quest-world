@@ -42,7 +42,7 @@ Turn the authoritative World State and Quest/progression read models into a worl
 | WORLD-READ-01 | Durable Quest and progression read models | `storage/sqlite` | QUEST-INT-01, PROGRESSION-INT-01 | W4, W6 | Complete |
 | WORLD-INT-01 | Main-branch integration and restart/scope review | Repository | WORLD-01, WORLD-PERSIST-01, WORLD-READ-01 | W1-W8 | Complete |
 | WORLD-WEB-01 | World Scene, Mini HUD, contextual panels, and Return Overlay | `apps/world-web` | WORLD-INT-01 | G6 presentation slice | Complete |
-| WORLD-WEB-02 | Wire the Web endpoint to SQLite-backed read models and live Observer flow | `apps/world-web` / `storage/sqlite` | WORLD-WEB-01 | G6 live read-model checks | Next |
+| WORLD-WEB-02 | Wire the Web endpoint to SQLite-backed read models and live Observer flow | `apps/world-web` / `storage/sqlite` | WORLD-WEB-01 | G6 live read-model checks | Complete |
 
 ## Repair history
 
@@ -56,8 +56,8 @@ G0-G5 and E1-E8 remain green. W1-W8 pass for the persistent World State slice.
 
 The persistent World State slice is complete: fresh-state, active/returning Gate, credible unlock, negative-evidence, duplicate replay, SQLite restart, temporary activity decay, milestone hooks, durable read models, and highlight-budget fixtures pass together.
 
-The first Web presentation slice is also complete: the scene is world-first, desktop uses a contextual side panel, narrow screens use an accessible bottom drawer/navigation, and the Return Overlay exposes only bounded World State highlights. The endpoint is deliberately deterministic while the live SQLite-backed adapter flow remains the next item.
+The Web presentation slice is complete: the scene is world-first, desktop uses a contextual side panel, narrow screens use an accessible bottom drawer/navigation, the Return Overlay exposes only bounded World State highlights, and the root page reads SQLite-backed projections. The deterministic fixture remains an explicit visual-verification lens rather than the default world source.
 
 ## Exact next action
 
-Wire the existing SQLite World State and Quest/progression read models behind the Web presentation without moving any game rules into the browser.
+Select and implement the first real Harness Adapter behind the existing Adapter/Observer boundary, then feed one real local run into the persistent Web world.
