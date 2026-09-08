@@ -419,17 +419,19 @@ function calculateActivityMix(domainScores) {
     return createEmptyDomainScores();
   }
 
-  const mix = {};
-  let allocated = 0;
-  for (let index = 0; index < SEMANTIC_DOMAINS.length; index += 1) {
+  const mix = createEmptyDomainScores();
+  let remaining = 100;
+  for (let index = 0; index < SEMANTIC_DOMAINS.length - 1; index += 1) {
     const domain = SEMANTIC_DOMAINS[index];
-    const isLast = index === SEMANTIC_DOMAINS.length - 1;
-    const value = isLast
-      ? roundPercentage(100 - allocated)
-      : roundPercentage((domainScores[domain] / total) * 100);
+    const value = Math.min(
+      remaining,
+      roundPercentage((domainScores[domain] / total) * 100)
+    );
     mix[domain] = value;
-    allocated += value;
+    remaining = Math.max(0, roundPercentage(remaining - value));
   }
+  const lastDomain = SEMANTIC_DOMAINS.at(-1);
+  mix[lastDomain] = roundPercentage(remaining);
   return mix;
 }
 

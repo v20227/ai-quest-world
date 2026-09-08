@@ -54,14 +54,20 @@ core/game/
   quest-types.mjs
   quest-engine.mjs
   outcome-policy.mjs
+  progression-types.mjs
+  progression-policy.mjs
 tests/ai-quest-world/
   quest.test.mjs
+  progression.test.mjs
 ```
 
 - `quest-types.mjs` owns the serializable Quest projection and lifecycle vocabulary.
 - `quest-engine.mjs` owns deterministic root-run association, lifecycle transitions, semantic projections, and replay idempotency.
 - `outcome-policy.mjs` classifies terminal confidence from validation and factual artifact/evidence references; native completion alone is never Verified.
-- This slice stores normalized event facts internally for classification but exposes no reward, growth, loot, or World State fields.
+- The Quest/outcome slice stores normalized event facts internally for classification but exposes no reward, growth, loot, or World State fields.
+- `progression-types.mjs` owns the serializable progression snapshot and anti-abuse diagnostics.
+- `progression-policy.mjs` calculates bounded Skill XP, Domain Progress, and artifact rewards from semantic records and Quest evidence; it has no token/tool/file/agent-volume reward path and no World State dependency.
+- Activity Mix projections clamp rounded percentages against the remaining 100-point budget so every domain remains within the valid range.
 
 ## Ownership
 

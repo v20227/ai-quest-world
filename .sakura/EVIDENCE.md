@@ -48,6 +48,18 @@
 - Artifact updates merged factual references without discarding previously observed durable evidence.
 - Quest projections remained free of reward, loot, growth, and World State mutation fields.
 
+## G4 progression and anti-abuse
+
+- `node --check` passed for progression types, policy, and the updated semantic/Quest projections.
+- The progression suite passed: 7/7 tests, 0 failures.
+- The combined Phase 1, persistence, semantic, Quest, and progression suites passed: 44/44 tests, 0 failures.
+- Active and validating Quests produced pending zero progression; terminal outcomes resolved bounded Skill XP and Domain Progress.
+- Verified, Supported, Unverified, Failed, and Cancelled outcomes used deterministic confidence multipliers; failed work retained only limited process credit.
+- Raw resource volume changes did not change progression, and duplicate semantic records changed only anti-abuse diagnostics.
+- Twenty repeated validation failures produced the same capped validation credit as one initial failure after diminishing credit was applied.
+- Real artifact loot required a durable artifact with a path or evidence reference; failed and unverified outcomes produced no fabricated loot.
+- Activity Mix rounding was clamped to a valid non-negative 0-100 range for every semantic and Quest projection.
+
 ## Remaining verification
 
-- Deterministic growth, rewards, anti-abuse policy, persistent Quest repositories, World State, Web World, and real Harness integration are intentionally not implemented in this slice.
+- Persistent Quest/progression repositories, World State, Web World, and real Harness integration are intentionally not implemented in this slice.

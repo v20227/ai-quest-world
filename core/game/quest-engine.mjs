@@ -267,15 +267,17 @@ function calculateActivityMix(domainScores) {
     return createEmptyActivityMix();
   }
 
-  const mix = {};
-  let allocated = 0;
-  domains.forEach((domain, index) => {
-    const value = index === domains.length - 1
-      ? roundPercentage(100 - allocated)
-      : roundPercentage((domainScores[domain] / total) * 100);
+  const mix = createEmptyActivityMix();
+  let remaining = 100;
+  domains.slice(0, -1).forEach((domain) => {
+    const value = Math.min(
+      remaining,
+      roundPercentage((domainScores[domain] / total) * 100)
+    );
     mix[domain] = value;
-    allocated += value;
+    remaining = Math.max(0, roundPercentage(remaining - value));
   });
+  mix[domains.at(-1)] = roundPercentage(remaining);
   return mix;
 }
 

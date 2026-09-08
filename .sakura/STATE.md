@@ -1,6 +1,6 @@
 # State
 
-- Current milestone: Milestone 3/G4, Quest and outcome foundation — in progress
-- Current item: G4B — evidence-bounded growth, rewards, and anti-abuse rules
-- Exact next action: Define and implement the smallest deterministic progression policy that consumes Quest outcome evidence without mutating World State.
+- Current milestone: Milestone 4/G5, Persistent World State — ready to start
+- Current item: WORLD-01 — persistent World State repository and projection boundary
+- Exact next action: Define and implement the smallest restart-safe World State slice driven by completed Quest progression.
 - Blockers: None. GitHub remote is configured; the main integration path owns commits and pushes.

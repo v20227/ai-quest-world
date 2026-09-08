@@ -1,20 +1,19 @@
-# Current Workstream: Quest Lifecycle and Outcome Evidence
+# Current Workstream: Evidence-Bounded Progression and Anti-Abuse
 
 ## Outcome
 
-Turn a normalized root run plus deterministic semantic records into one authoritative Quest lifecycle with child/retry association, evidence-based outcome confidence, and real artifact references. This slice must not award growth/rewards or mutate World State.
+Turn a completed Quest plus deterministic semantic records into bounded Skill XP, Domain Progress, and real artifact rewards. Replays, high-volume facts, repeated failures, child runs, and retries must not multiply progression, and this slice must not mutate World State.
 
 ## Acceptance
 
-- D1: A qualifying root `run.started` creates one `CANDIDATE` Quest with a deterministic title and root run identity.
-- D2: Meaningful semantic activity promotes the Quest to `ACTIVE`; validation activity uses `VALIDATING`.
-- D3: A root terminal event transitions the Quest to `COMPLETED`, `FAILED`, or `CANCELLED`.
-- D4: Child runs and retry runs attach to the parent Quest and never create an independent Quest completion.
-- D5: Independent root runs create separate Quests; replayed event IDs do not duplicate Quests or change their state.
-- D6: `run.completed` is `VERIFIED` only with successful validation plus a durable real artifact/evidence reference; otherwise it is `SUPPORTED` or `UNVERIFIED` according to available evidence.
-- D7: Failed and cancelled terminal events produce `FAILED` and `CANCELLED` confidence respectively; natural-language/native completion alone is not Verified.
-- D8: Quest records preserve semantic phase/domain mix, run/agent membership, validation summary, artifact references, and deterministic timestamps without reward or World State fields.
-- D9: Phase 1, persistence, and semantic tests remain green without an external AI/API.
+- E1: Only terminal Quest outcomes produce progression; active and validating Quests remain pending.
+- E2: Verified, Supported, Unverified, Failed, and Cancelled outcomes use deterministic bounded multipliers; failures may receive limited process credit but never full completion credit.
+- E3: Skill XP is based on fixed semantic transition weights and outcome evidence, not token usage, tool-call count, file-read/search count, or agent count.
+- E4: Repeated semantic kinds use diminishing credit and per-kind caps; twenty identical validation failures cannot produce twenty times the first failure credit.
+- E5: Domain Progress is bounded per Quest and follows semantic domain contributions plus outcome confidence.
+- E6: A real artifact reward requires `durable=true` and a URI/path or evidence reference; failed/cancelled/unverified outcomes do not fabricate artifact rewards.
+- E7: Duplicate semantic IDs/source event IDs are idempotent, child/retry records remain within the root Quest, and the output is deterministic.
+- E8: Phase 1, persistence, semantic, and Quest tests remain green without an external AI/API.
 
 ## Work items
 
@@ -35,6 +34,9 @@ Turn a normalized root run plus deterministic semantic records into one authorit
 | QUEST-01 | Quest types, root association, lifecycle, and deterministic projections | `core/game` | SEMANTIC-INT-01 | D1-D5, D8 | Complete |
 | OUTCOME-01 | Outcome/evidence policy and factual artifact references | `core/game` | QUEST-01 | D6-D8 | Complete |
 | QUEST-INT-01 | Main-branch integration and scope review | Repository | QUEST-01, OUTCOME-01 | D1-D9 | Complete |
+| PROGRESSION-01 | Evidence-bounded Skill XP, Domain Progress, and artifact reward policy | `core/game` | QUEST-INT-01 | E1-E6 | Complete |
+| ANTIABUSE-01 | Replay protection, diminishing credits, and reward caps | `core/game` | PROGRESSION-01 | E3-E7 | Complete |
+| PROGRESSION-INT-01 | Main-branch integration and scope review | Repository | PROGRESSION-01, ANTIABUSE-01 | E1-E8 | Complete |
 
 ## Repair history
 
@@ -42,12 +44,12 @@ Turn a normalized root run plus deterministic semantic records into one authorit
 
 ## Acceptance result
 
-G0-G3 remain green. D1-D9 pass in the Quest/outcome foundation slice; G4 growth, rewards, anti-abuse, and World State work remains.
+G0-G4 and D1-D9 remain green. E1-E8 pass for the progression/anti-abuse slice.
 
 ## Completion decision
 
-The Quest/outcome foundation slice is complete. The broader G4 milestone remains in progress until deterministic growth, rewards, anti-abuse, and artifact-reference hardening are implemented and verified.
+The progression/anti-abuse slice is complete: deterministic snapshots, duplicate replay, high-volume, repeated-failure, child/retry, and artifact-evidence fixtures pass together without World State mutation.
 
 ## Exact next action
 
-Define the next G4 batch for evidence-bounded growth, rewards, and anti-abuse rules without mutating World State.
+Define the smallest persistent World State repository and projection slice that consumes completed Quest progression without changing reward authority.

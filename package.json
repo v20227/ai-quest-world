@@ -7,7 +7,8 @@
     "test:phase1": "node --test tests/ai-quest-world/phase1.test.mjs",
     "test:persistence": "node --test tests/ai-quest-world/persistence.test.mjs",
     "test:semantic": "node --test tests/ai-quest-world/semantic.test.mjs",
-    "test:quest": "node --test tests/ai-quest-world/quest.test.mjs"
+    "test:quest": "node --test tests/ai-quest-world/quest.test.mjs",
+    "test:progression": "node --test tests/ai-quest-world/progression.test.mjs"
   },
   "engines": {
     "node": ">=22.13.0"
