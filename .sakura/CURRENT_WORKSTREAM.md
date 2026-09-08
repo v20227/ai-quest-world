@@ -13,11 +13,11 @@ The earlier delivery decision below is historical and superseded. v0.1 remains o
 
 | ID | Result | Owner | Prerequisite | Check | State |
 | --- | --- | --- | --- | --- | --- |
-| TRUST-01 | Conservative adapter evidence, outcome and empty-run settlement | adapters / core/game | Existing foundation | T1, T2 | Batch verified; integration pending |
-| TRUST-02 | Explicit resume association and safe derived-state rebuilding | core / storage / runtime | TRUST-01 contracts | T2, T5 | Batch verified; integration pending |
-| LIVE-01 | Continuous multi-Quest world, durable return identity and clock projection | runtime / renderer | TRUST-02 | T4, T5 | Batch verified; final browser matrix pending |
-| EXPERIENCE-01 | Minimal difficulty, artifact access and scoped world feedback | core / renderer | LIVE-01 | T6 | In progress |
-| ACCEPT-01 | Real engineering/non-code, negative paths, browser, restart and independent review | Integration | All preceding | T1–T6 | Pending |
+| TRUST-01 | Conservative adapter evidence, outcome and empty-run settlement | adapters / core/game | Existing foundation | T1, T2 | Verified |
+| TRUST-02 | Explicit resume association and safe derived-state rebuilding | core / storage / runtime | TRUST-01 contracts | T2, T5 | Verified |
+| LIVE-01 | Continuous multi-Quest world, durable return identity and clock projection | runtime / renderer | TRUST-02 | T4, T5 | Verified on existing root world |
+| EXPERIENCE-01 | Minimal difficulty, artifact access and scoped world feedback | core / renderer | LIVE-01 | T6 | Verified on existing root world |
+| ACCEPT-01 | Real engineering/non-code, negative paths, browser, restart and independent review | Integration | TRUST-01, TRUST-02, LIVE-01, EXPERIENCE-01 | T1–T6 | Verified; GitHub integration pending |
 
 ## Current repair history
 
@@ -29,6 +29,17 @@ The earlier delivery decision below is historical and superseded. v0.1 remains o
 - TRUST-F04: independent review reproduced stale/retracted semantic records in public incremental composition. `QuestEngine.process` now replaces the complete semantic snapshot, and `ingest` accepts that snapshot array. Scalar append remains supported only when chronological and lineage-stable; unsafe late scalar input rejects before mutation. Reverse delivery and retraction regressions match batch projection.
 - LIVE-F02: postsettlement factual artifacts were hidden by a loot-only inventory. Inventory now merges durable factual references with loot and labels unrewarded facts without changing progression or return identity. Regression confirms two visible references, unchanged XP and one return.
 - EXPERIENCE-01 execution: core owns an evolving 1–5 estimate from distinct meaningful semantic phases and scope, observed value only at terminal, Unknown without evidence; no difficulty XP multiplier. Server owns opt-in artifact-root containment and registered-reference lookup with no arbitrary path endpoint. Renderer labels the estimate and opens only the server-provided local artifact link. Checks: deterministic/repeat invariance plus missing/out-of-root/symlink/hidden/executable-content file cases and browser open.
+- EXPERIENCE-F01: initial artifact access rejected valid files through macOS's temporary-directory alias. Normalize the explicitly configured root alias to its canonical directory, retaining checks on every descendant; targeted artifact/Web tests passed after repair.
+- ACCEPT-01 entry: the passive collector consumes one public `codex exec --json` execution through stdin and never spawns a process. Stable execution ID and project root are mandatory; reuse an ID only for replay. Explicit recovery linkage is optional. Missing terminal marker, malformed stream, mixed threads or multiple turns fail closed. Artifact paths and file viewing require separate opt-ins; no raw content is archived.
+- ACCEPT-F01: boundary review reproduced missing/empty/out-of-order lifecycle and malformed/unknown records reaching completion. Passive input now requires `thread.started → turn.started → items → turn.completed/failed`, with explicit record shape checks; invalid input produces a failed Quest with no completion bonus or loot. Added seven adversarial stream variants. Initial new regression referenced the wrong diagnostic field; corrected to `semantic_credit.outcome_bonus` and reran successfully.
+- EXPERIENCE-F02: boundary review reproduced `.sqlite3` collection and file serving. Shared privacy checks now cover numbered SQLite/DB extensions and companion suffixes; adapter and server reject SQLite headers even under a `.txt` name. Five real-format synthetic database variants fail both boundaries.
+- LIVE-F03: polling replaced unchanged panel DOM, discarding focus. Panel markup is now updated only on change; when changed, stable control identity and scroll are retained. Return modal traps Tab and restores focus. Browser verification remains required for these repairs.
+- ACCEPT-F02: final independent review reproduced missing/in-progress file completion status being treated as success. File-change evidence now requires explicit successful completion; passive completed-file records reject inconsistent statuses. Three regression variants assert Failed, zero XP and no artifacts. The final real document update passed this stricter path.
+- EXPERIENCE-F03: embedded browser blocked direct file navigation. Retired that direction after two failed browser attempts; the artifact card now fetches the same restricted endpoint and renders text with escaping. Original document content was observed in-browser, with focus retained after loading. Closed narrow-screen panels are inert and remain closed across polls.
+
+## Backend acceptance decision
+
+T1–T6 pass for the trusted-loop backend and existing root world, with 117 scoped automated checks, independent findings repaired, two real tasks and two explicit continuations, restart/replay, and desktop/narrow-screen browser evidence in `EVIDENCE.md`. The supported source is a passive single-execution Codex CLI JSONL stream with explicit identity; it is not desktop-session discovery or a universal validation interpreter. No additional model/API is required by the game. The separate frontend and asset production work is not included in this decision. Complete GitHub integration from the isolated backend commit before closing this backend goal.
 
 ## Historical foundation records
 

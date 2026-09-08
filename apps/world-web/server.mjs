@@ -9,6 +9,7 @@ import { QuestEngine } from "../../core/game/quest-engine.mjs";
 import { analyzeRuntimeEvents } from "../../core/semantic/semantic-engine.mjs";
 import { WorldStateEngine } from "../../core/world/world-state-engine.mjs";
 import { PersistentWorldRuntime } from "./world-runtime.mjs";
+import { isLocalRequest, readArtifact } from "./artifact-access.mjs";
 
 const APP_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_FILES = new Map([
@@ -66,10 +67,15 @@ export function buildDemoSnapshot({ mode = "canonical" } = {}) {
 }
 
 /** @param {{runtime?: PersistentWorldRuntime|null}=} options @returns {import("node:http").Server} */
-export function createWorldWebServer({ runtime = null } = {}) {
+export function createWorldWebServer({ runtime = null, artifactRoot = null } = {}) {
   return createServer(async (request, response) => {
     try {
-      await handleRequest(request, response, runtime);
+      response.setHeader("x-content-type-options", "nosniff");
+      response.setHeader("referrer-policy", "no-referrer");
+      if (!isLocalRequest(request)) {
+        response.writeHead(403); response.end("Local origin required"); return;
+      }
+      await handleRequest(request, response, runtime, artifactRoot);
     } catch (error) {
       if (!response.headersSent) {
         response.writeHead(500, { "content-type": "application/json; charset=utf-8" });
@@ -84,13 +90,14 @@ export function createWorldWebServer({ runtime = null } = {}) {
 export function startWorldWebServer({
   port = Number(process.env.AI_QUEST_WORLD_PORT ?? 4173),
   host = "127.0.0.1",
-  path = process.env.AI_QUEST_WORLD_DB ?? "storage/sqlite/ai-quest-world.sqlite"
+  path = process.env.AI_QUEST_WORLD_DB ?? "storage/sqlite/ai-quest-world.sqlite",
+  artifactRoot = process.env.AI_QUEST_WORLD_ARTIFACT_ROOT ?? null
 } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     throw new TypeError("port must be an integer between 0 and 65535");
   }
   const runtime = new PersistentWorldRuntime({ path });
-  const server = createWorldWebServer({ runtime });
+  const server = createWorldWebServer({ runtime, artifactRoot });
   server.on("close", () => runtime.close());
   server.listen(port, host, () => {
     const address = server.address();
@@ -100,7 +107,7 @@ export function startWorldWebServer({
   return server;
 }
 
-async function handleRequest(request, response, runtime) {
+async function handleRequest(request, response, runtime, artifactRoot) {
   if (request.method !== "GET") {
     response.writeHead(405, { allow: "GET" });
     response.end();
@@ -108,6 +115,20 @@ async function handleRequest(request, response, runtime) {
   }
 
   const requestUrl = new URL(request.url ?? "/", "http://localhost");
+  if (requestUrl.pathname === "/api/artifact") {
+    const artifact = runtime === null ? null : await readArtifact({ root: artifactRoot, snapshot: runtime.getSnapshot(),
+      questId: requestUrl.searchParams.get("quest"), artifactId: requestUrl.searchParams.get("artifact") });
+    if (artifact === null) {
+      response.writeHead(404, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });
+      response.end("Artifact unavailable. Enable the project artifact root and check that the original file still exists."); return;
+    }
+    response.writeHead(200, {
+      "content-type": artifact.text ? "text/plain; charset=utf-8" : "application/octet-stream",
+      "content-disposition": `${artifact.text ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(artifact.name)}`,
+      "cache-control": "no-store", "content-security-policy": "sandbox; default-src 'none'", "cross-origin-resource-policy": "same-origin"
+    });
+    response.end(artifact.content); return;
+  }
   if (requestUrl.pathname === "/api/demo") {
     const mode = requestUrl.searchParams.get("mode") ?? "canonical";
     if (!["canonical", "unverified"].includes(mode)) {
@@ -128,7 +149,7 @@ async function handleRequest(request, response, runtime) {
       return;
     }
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-    response.end(JSON.stringify({ ...runtime.getSnapshot({ at: new Date().toISOString() }), diagnostics: runtime.getDiagnostics() }));
+    response.end(JSON.stringify({ ...runtime.getSnapshot({ at: new Date().toISOString() }), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
     return;
   }
 

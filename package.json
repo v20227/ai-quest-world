@@ -14,6 +14,7 @@
     "test:web": "node --test tests/ai-quest-world/web.test.mjs",
     "dev": "node apps/world-web/server.mjs",
     "observe:codex": "node apps/world-web/observe-codex.mjs",
+    "collect:codex": "node apps/world-web/collect-codex.mjs",
     "start": "node apps/world-web/server.mjs"
   },
   "engines": {

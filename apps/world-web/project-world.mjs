@@ -5,7 +5,7 @@ import { QuestEngine } from "../../core/game/quest-engine.mjs";
 import { calculateProgression } from "../../core/game/progression-policy.mjs";
 import { WorldStateEngine } from "../../core/world/world-state-engine.mjs";
 
-export const PROJECTION_POLICY_VERSION = "trusted-loop-1";
+export const PROJECTION_POLICY_VERSION = "trusted-loop-2";
 
 export function projectWorld(rawEvents) {
   const supported = rawEvents.map(supportedCodexEvidence).filter(Boolean);

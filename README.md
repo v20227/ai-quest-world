@@ -120,6 +120,36 @@ This entry launches a new read-only Codex CLI task; it does not observe existing
 
 File paths and artifact collection are disabled by default. Set `AI_QUEST_WORLD_ARTIFACT_PATHS=1` only for a project whose output paths you permit to be saved locally. Then successfully observed file changes may become artifact references after the adapter confirms a regular file inside the project still exists at run end. Hidden paths, common credential files and paths outside the project are excluded. File contents are not archived. Run `npm run dev` separately to view the world.
 
+### Observe your own CLI execution
+
+Use the passive collector when Codex is doing real work. Start the world in one terminal, then pipe a single public JSONL execution into the collector from another terminal. Both commands run from this project's root:
+
+```sh
+AI_QUEST_WORLD_DB=/path/to/world.sqlite \
+AI_QUEST_WORLD_ARTIFACT_ROOT=/path/to/working-project \
+npm run dev
+```
+
+```sh
+set -o pipefail
+codex exec --json --ephemeral --sandbox workspace-write \
+  -C /path/to/working-project "your real task" | \
+AI_QUEST_WORLD_DB=/path/to/world.sqlite \
+AI_QUEST_WORLD_CODEX_CWD=/path/to/working-project \
+AI_QUEST_WORLD_CODEX_RUN_ID=work-20260908-001 \
+AI_QUEST_WORLD_CODEX_TITLE="Your task title" \
+AI_QUEST_WORLD_ARTIFACT_PATHS=1 \
+node apps/world-web/collect-codex.mjs
+```
+
+The collector never launches or sends commands to Codex. Choose Codex permissions for your task yourself. The world refreshes automatically and presents each new return once in the same browser profile. This entry does not attach to existing desktop conversations or infer hidden subagent relationships.
+
+Use a unique `AI_QUEST_WORLD_CODEX_RUN_ID` for each execution and reuse it only when replaying the same execution. For an explicit continuation of the same goal, additionally set `AI_QUEST_WORLD_RESUMED_FROM_RUN_ID` to the preceding execution ID; child/recovery activity shares one bounded Quest settlement. Do not concatenate different executions into one collector input. A truncated stream without a completion marker is not successful work.
+
+Artifact collection and viewing are separate opt-ins. `AI_QUEST_WORLD_ARTIFACT_ROOT` allows the Web server to open registered files in that project only. In the Quest or Workshop/Library panel, select an artifact and choose **View original file**. Text/code appears as escaped plain text in the card; other file types offer a download. The current file must still exist, be a permitted regular file and be at most 1 MiB. No content is archived; paths alone are not a permanent file backup. A factual artifact may be visible without being rewarded.
+
+Difficulty is a coarse 1–5 estimate from meaningful phase and domain breadth. Unsupported evidence stays Unknown, and the observed value is recorded at settlement. It is not an XP multiplier. Validation remains conservative: Node test summaries with nonzero executed tests are recognized; unsupported runner output can remain Unknown even when its process exits successfully.
+
 ## Before implementation
 
 Read `AGENTS.md`, then `START_GOAL.md`.

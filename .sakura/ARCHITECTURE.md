@@ -6,6 +6,8 @@
 - `SemanticEngine.process` returns the complete current interpretation snapshot. `QuestEngine.process` retains raw history but replaces semantic records wholesale, including retractions. For out-of-order/re-associated incremental input, pass `semantic.process([event])` to `quest.ingest(event, records)`; scalar append rejects unsafe history changes.
 - `apps/world-web/project-world.mjs` composes one full deterministic projection. `storage/sqlite/projection-store.mjs` replaces Quest, progression, world and applied-input rows atomically under schema4, recording policy version and raw event count. Runtime no longer coordinates separate Quest/World repository writes. Raw facts remain intact through policy rebuilds.
 - `core/world/world-view.mjs` advances temporary activity for a requested display time without persisting rounded decay or changing permanent progress. Core-generated return history carries stable identities. Browser helpers select active/latest tasks and combine factual artifacts with reward references without granting rewards.
+- `core/game/difficulty-policy.mjs` computes optional descriptive difficulty from bounded semantic dimensions. It never changes progression weights. `apps/world-web/collect-codex.mjs` composes the existing adapter/runtime around a supplied stdin stream, without process control.
+- `packages/adapter-core/artifact-privacy.mjs` shares local file privacy predicates between collection and viewing. `apps/world-web/artifact-access.mjs` enforces explicit project-root and exact durable-identity access; the server exposes only bounded local reads, while the existing renderer escapes fetched text into the artifact card without storing content.
 
 ## Phase 1 module map
 

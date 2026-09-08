@@ -1,5 +1,19 @@
 # Evidence
 
+## Trusted real-work loop acceptance
+
+- Source: `EXPERIENCE-ACCEPT-01` release event, backend slice after `385575c`; Command Hall and asset production are outside this evidence. Node v24.12.0. All 117 backend/root-world tests passed, no skips; diff whitespace checks passed.
+- New coverage: difficulty Unknown/1–5/terminal/repeat invariance; opt-in exact artifact lookup, traversal/symlink/hardlink/hidden/oversize/database/header blocking, HTML returned as sandboxed plain text, local Host/Origin enforcement; passive JSONL privacy/replay/strict lifecycle/invalid-file-status cases.
+- Independent review findings ACCEPT-F01, EXPERIENCE-F02 and ACCEPT-F02 were reproduced and repaired with retained regression cases. The final reviewer also independently read the real SQLite evidence and confirmed deterministic reverse/duplicate reprojection. Final file-status repair was followed by 117 passing tests and a new real document update.
+- Real isolated project and evidence database: `/tmp/ai-quest-world-real-JCSOoQ/`, `world.sqlite`. No user's existing project code/database was used for fixtures. Raw JSONL, reasoning and message contents were not archived.
+- Engineering execution `real-engineering-20260908-a`: actual two failing Node tests, actual source repair, then the same two tests passed. Quest Verified, one real code artifact, 37 XP, Workshop unlocked. Parent separately reran the tests and confirmed 2/2 pass.
+- Non-code execution `real-document-20260908-a`: created `volunteer-guide.md` from `brief.txt`, no code/test generation, Supported (not Verified), one document artifact, 17 XP, Library unlocked.
+- Explicit continuations `real-engineering-20260908-b` and `real-document-20260908-b` referenced their preceding execution IDs. The former revalidated both tests; the latter updated the real document after strict file-status checking was added. Final totals remained 54 XP, two qualifying Quests, two rewarded artifacts and two stable return identities. There are 48 normalized events; factual postsettlement references can be inspected without a new loot reward.
+- Real snapshot survived database reopen and reverse duplicate ingestion without changed derived state. Independent review separately confirmed the earlier 37-event snapshot against in-memory reprojection; final 48-event checks are recorded by the final integration run.
+- Browser: live real world at `http://127.0.0.1:4184/`, separate from the user's default database. Observed new active task selection, engineering Verified with difficulty4/5 and 2/2 latest validation, document source card and original file text. Polling retained preview focus. At390×844 no horizontal overflow, drawer opened by scene selection and closed out of the accessibility tree; at1280×900 world remained primary with a side panel. No browser warning/error entries on the final page.
+- Return behavior: simulated live fixture verified auto discovery, exactly three highlights, automatic close and no replay after reload; demo lens verified Tab stays on the return button. Real follow-ups generated no additional return identity. Preview does not execute file markup or persist its text.
+- Boundaries: only public single-execution CLI JSONL is supported here; no desktop conversation attachment, automatic hidden subagent discovery or arbitrary runner-output trust. Artifact viewing is explicit, local, size-bounded and current-file-only, not a backup. Difficulty is descriptive and adds no reward multiplier. Separate Command Hall integration and produced art are not certified by this backend acceptance.
+
 ## TRUST-02 / LIVE-01 working batch
 
 - Tested source: the `TRUST-LIVE-02` release event commit, before EXPERIENCE-01. Full suite passed 97 tests, including atomic rollback/replacement, old-policy rebuild, explicit resume recovery, orphan/conflicting lineage, incremental/full-batch equality, duplicate/restart equality, clock-driven decay and multi-Quest return/artifact helpers.

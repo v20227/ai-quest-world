@@ -36,7 +36,10 @@ const ui = {
   pendingReturns: [],
   seenReturns: restoreSeenReturns(),
   activeReturn: null,
-  returnTimer: null
+  returnTimer: null,
+  panelMarkup: null,
+  returnFocus: null,
+  artifactPreview: null
 };
 
 const BUILDING_PANELS = new Set(["gate", "guild", "workshop", "library", "camp", "chronicle", "settings", "quest", "artifact"]);
@@ -46,6 +49,8 @@ init();
 async function init() {
   restorePreferences();
   bindEvents();
+  window.addEventListener("resize", syncPanelAccess);
+  syncPanelAccess();
   await loadSnapshot();
   window.setInterval(() => {
     if (ui.source === "live" && !document.hidden && !ui.loading) loadSnapshot(ui.mode, { silent: true });
@@ -57,6 +62,8 @@ async function init() {
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
+    const originalTrigger = event.target.closest("[data-open-artifact]");
+    if (originalTrigger !== null) { openArtifact(originalTrigger.dataset.openArtifact); return; }
     const panelTrigger = event.target.closest("[data-panel]");
     if (panelTrigger !== null) {
       selectPanel(panelTrigger.dataset.panel);
@@ -108,6 +115,8 @@ function bindEvents() {
 
     if (event.target.closest("#close-panel") !== null) {
       refs.contextShell.classList.remove("is-open");
+      syncPanelAccess();
+      refs.reloadButton.focus({ preventScroll: true });
       return;
     }
 
@@ -117,11 +126,15 @@ function bindEvents() {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Tab" && !refs.returnOverlay.classList.contains("is-hidden")) {
+      event.preventDefault(); refs.enterWorld.focus(); return;
+    }
     if (event.key === "Escape") {
       if (!refs.returnOverlay.classList.contains("is-hidden")) {
         hideReturnOverlay();
       } else {
         refs.contextShell.classList.remove("is-open");
+        syncPanelAccess();
       }
     }
   });
@@ -220,10 +233,24 @@ function selectPanel(panel, { keepMobileOpen = true } = {}) {
   const definition = panelDefinition(panel);
   refs.panelEyebrow.textContent = definition.eyebrow;
   refs.panelTitle.textContent = definition.title;
-  refs.panelContent.innerHTML = ui.snapshot === null ? loadingMarkup() : definition.render(ui.snapshot);
+  const markup = ui.snapshot === null ? loadingMarkup() : definition.render(ui.snapshot);
+  if (markup !== ui.panelMarkup) {
+    const focused = refs.panelContent.contains(document.activeElement) ? document.activeElement : null;
+    const identity = focused && ["id", "data-quest-id", "data-artifact-id", "data-open-artifact", "data-panel", "href"].map(key => [key, focused.getAttribute(key)]).find(([, value]) => value !== null);
+    const scroll = refs.contextShell.scrollTop;
+    refs.panelContent.innerHTML = markup;
+    ui.panelMarkup = markup;
+    if (identity) [...refs.panelContent.querySelectorAll("button, a, input")].find(element => element.getAttribute(identity[0]) === identity[1])?.focus({ preventScroll: true });
+    refs.contextShell.scrollTop = scroll;
+  }
   if (keepMobileOpen) {
     refs.contextShell.classList.add("is-open");
   }
+  syncPanelAccess();
+}
+
+function syncPanelAccess() {
+  refs.contextShell.inert = window.matchMedia("(max-width: 620px)").matches && !refs.contextShell.classList.contains("is-open");
 }
 
 function panelDefinition(panel) {
@@ -348,6 +375,8 @@ function renderQuestPanel(snapshot) {
       <div class="evidence-head"><h3 class="evidence-title">${escapeHtml(quest.title)}</h3>${confidenceBadge(quest.outcome_confidence)}</div>
       <div class="detail-line"><span>Lifecycle</span><strong>${labelize(quest.status)}</strong></div>
       <div class="detail-line"><span>Current phase</span><strong>${labelize(quest.phase)}</strong></div>
+      <div class="detail-line"><span>Estimated difficulty</span><strong>${quest.difficulty?.estimated == null ? "Unknown" : `${quest.difficulty.estimated}/5`}</strong></div>
+      <div class="detail-line"><span>Observed difficulty</span><strong>${quest.difficulty?.observed == null ? "Unknown" : `${quest.difficulty.observed}/5`}</strong></div>
       <div class="detail-line"><span>Runs gathered</span><strong>${quest.run_ids.length}</strong></div>
       <div class="detail-line"><span>Agents observed</span><strong>${quest.agent_ids.length}</strong></div>
     </div>
@@ -386,7 +415,34 @@ function renderArtifactPanel(snapshot) {
       <div class="detail-line"><span>Settlement</span><strong>${artifact.rewarded ? "Included in settled loot" : "Observed reference · no extra reward"}</strong></div>
       <div class="detail-line"><span>Evidence refs</span><strong>${artifact.evidence_refs?.length ?? 0}</strong></div>
     </div>
+    ${snapshot.capabilities?.artifact_view ? `<div class="panel-action-row"><button class="primary-button" type="button" data-open-artifact="${escapeAttribute(artifactKey(artifact))}">View original file</button></div><p class="artifact-meta">Current local file, not an archived copy. Missing or protected files remain unavailable.</p>${artifactPreviewMarkup(artifact)}` : `<p class="artifact-meta">Original file viewing is off. Enable AI_QUEST_WORLD_ARTIFACT_ROOT for this project to view permitted files.</p>`}
   `;
+}
+
+function artifactUrl(artifact) {
+  return `/api/artifact?quest=${encodeURIComponent(artifact.source_quest_id)}&artifact=${encodeURIComponent(artifact.artifact_id)}`;
+}
+
+async function openArtifact(key) {
+  const artifact = allArtifacts(ui.snapshot?.progressions ?? [], ui.snapshot?.quests ?? []).find(value => artifactKey(value) === key);
+  if (!artifact || !ui.snapshot.capabilities?.artifact_view || ui.source !== "live") return;
+  const preview = { key, status: "Loading original file…" };
+  ui.artifactPreview = preview;
+  selectPanel("artifact", { keepMobileOpen: false });
+  try {
+    const response = await fetch(artifactUrl(artifact), { cache: "no-store", signal: AbortSignal.timeout(8000) });
+    if (!response.ok) throw new Error("unavailable");
+    if (response.headers.get("content-type")?.startsWith("text/plain")) {
+      preview.text = await response.text(); preview.status = "Original content";
+    } else { preview.binary = true; preview.status = "Binary file — download to view"; }
+  } catch { preview.status = "Original file unavailable. It may be missing, protected or larger than 1 MiB."; }
+  if (ui.artifactPreview === preview && ui.selectedPanel === "artifact") selectPanel("artifact", { keepMobileOpen: false });
+}
+
+function artifactPreviewMarkup(artifact) {
+  const preview = ui.artifactPreview;
+  if (preview?.key !== artifactKey(artifact)) return "";
+  return `<div class="detail-card" aria-live="polite"><h3 class="evidence-title">${escapeHtml(preview.status)}</h3>${preview.text === undefined ? "" : `<pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:24rem;overflow:auto">${escapeHtml(preview.text)}</pre>`}${preview.binary ? `<a class="secondary-button" download href="${escapeAttribute(artifactUrl(artifact))}">Download original file</a>` : ""}</div>`;
 }
 
 function renderChroniclePanel(snapshot) {
@@ -436,6 +492,7 @@ function renderError() {
   `;
   refs.panelContent.querySelector("#retry-world")?.addEventListener("click", () => loadSnapshot(ui.mode));
   refs.contextShell.classList.add("is-open");
+  syncPanelAccess();
 }
 
 function showLoading() {
@@ -450,6 +507,7 @@ function loadingMarkup() {
 
 function showReturnOverlay(entry) {
   clearTimeout(ui.returnTimer);
+  if (refs.returnOverlay.classList.contains("is-hidden")) ui.returnFocus = document.activeElement;
   const highlights = entry.highlights ?? [];
   refs.returnTitle.textContent = highlights.some((item) => item.kind === "milestone_unlocked")
     ? "The world changed."
@@ -465,6 +523,8 @@ function hideReturnOverlay() {
   clearTimeout(ui.returnTimer);
   ui.activeReturn = null;
   refs.returnOverlay.classList.add("is-hidden");
+  if (ui.returnFocus?.isConnected) ui.returnFocus.focus({ preventScroll: true });
+  else refs.reloadButton.focus({ preventScroll: true });
   showNextReturn();
 }
 
