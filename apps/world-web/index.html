@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1c2437">
+    <meta name="description" content="AI Quest World — a persistent pixel world for meaningful AI work.">
+    <title>AI Quest World</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body data-theme="dusk">
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="AI Quest World home">
+          <span class="brand-glyph" aria-hidden="true">✦</span>
+          <span class="brand-copy">
+            <strong>AI QUEST</strong>
+            <small>WORLD / V0.1</small>
+          </span>
+        </a>
+        <div class="topbar-actions">
+          <div class="connection-chip" id="connection-chip" aria-live="polite">
+            <span class="signal-dot" aria-hidden="true"></span>
+            <span id="connection-label">Connecting</span>
+          </div>
+          <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">◐</button>
+          <button class="icon-button" id="motion-toggle" type="button" aria-pressed="false" aria-label="Reduce motion" title="Reduce motion">≈</button>
+        </div>
+      </header>
+
+      <main class="world-layout">
+        <section class="world-card card" aria-labelledby="world-title">
+          <div class="section-heading scene-heading">
+            <div>
+              <p class="eyebrow">PERSISTENT WORLD / SMALL CAMP</p>
+              <h1 id="world-title">The work leaves a trace.</h1>
+            </div>
+            <button class="text-button" id="reload-demo" type="button">Replay signal <span aria-hidden="true">↗</span></button>
+          </div>
+
+          <div class="world-scene" id="world-scene" aria-label="Small Camp world scene">
+            <div class="sky-lines" aria-hidden="true"></div>
+            <div class="moon" aria-hidden="true"><span></span></div>
+            <div class="cloud cloud-one" aria-hidden="true"><span></span><span></span></div>
+            <div class="cloud cloud-two" aria-hidden="true"><span></span><span></span></div>
+            <div class="mountain mountain-back" aria-hidden="true"></div>
+            <div class="mountain mountain-front" aria-hidden="true"></div>
+            <div class="ground-ground" aria-hidden="true"></div>
+            <div class="path path-left" aria-hidden="true"></div>
+            <div class="path path-right" aria-hidden="true"></div>
+
+            <button class="world-object object-library" data-panel="library" type="button" aria-label="Open Library panel">
+              <span class="object-aura" aria-hidden="true"></span>
+              <span class="pixel-building library-sprite" aria-hidden="true"><i></i><b></b><em></em></span>
+              <span class="object-copy"><strong>Library</strong><small data-status-for="library">Locked</small></span>
+            </button>
+
+            <button class="world-object object-workshop" data-panel="workshop" type="button" aria-label="Open Workshop panel">
+              <span class="object-aura" aria-hidden="true"></span>
+              <span class="pixel-building workshop-sprite" aria-hidden="true"><i></i><b></b><em></em></span>
+              <span class="object-copy"><strong>Workshop</strong><small data-status-for="workshop">Locked</small></span>
+            </button>
+
+            <button class="world-object object-camp" data-panel="camp" type="button" aria-label="Open Small Camp panel">
+              <span class="object-aura" aria-hidden="true"></span>
+              <span class="pixel-building camp-sprite" aria-hidden="true"><i></i><b></b><em></em></span>
+              <span class="object-copy"><strong>Small Camp</strong><small>Home base</small></span>
+            </button>
+
+            <button class="world-object object-guild" data-panel="guild" type="button" aria-label="Open Quest Guild panel">
+              <span class="object-aura" aria-hidden="true"></span>
+              <span class="pixel-building guild-sprite" aria-hidden="true"><i></i><b></b><em></em></span>
+              <span class="object-copy"><strong>Quest Guild</strong><small data-status-for="guild">Old</small></span>
+            </button>
+
+            <button class="world-object object-gate" data-panel="gate" type="button" aria-label="Open AI Gate panel">
+              <span class="object-aura" aria-hidden="true"></span>
+              <span class="pixel-building gate-sprite" aria-hidden="true"><i></i><b></b><em></em></span>
+              <span class="object-copy"><strong>AI Gate</strong><small data-status-for="gate">Dormant</small></span>
+            </button>
+
+            <div class="scene-sign" aria-hidden="true"><span>SC</span><b>SMALL CAMP</b></div>
+            <div class="pixel-fire" aria-hidden="true"><i></i><b></b><em></em></div>
+            <div class="scene-hint"><span class="hint-key">CLICK</span> to inspect the world</div>
+          </div>
+
+          <div class="scene-footer">
+            <div class="scene-status"><span class="status-mark" aria-hidden="true"></span><span id="scene-status">Restoring signal...</span></div>
+            <span class="scene-coordinate">WORLD 01 / LOCAL</span>
+          </div>
+        </section>
+
+        <aside class="context-shell card" id="context-shell" aria-labelledby="panel-title">
+          <div class="panel-topline">
+            <p class="eyebrow" id="panel-eyebrow">WORLD LENS</p>
+            <button class="close-button" id="close-panel" type="button" aria-label="Close context panel">×</button>
+          </div>
+          <h2 id="panel-title">Loading world...</h2>
+          <div class="panel-content" id="panel-content" aria-live="polite">
+            <div class="loading-stack" aria-label="Loading">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <section class="mini-hud card" aria-label="Current expedition summary">
+        <div class="hud-brand"><span class="hud-spark" aria-hidden="true">✦</span><span>CURRENT EXPEDITION</span></div>
+        <div class="hud-quest">
+          <strong id="hud-quest-title">Waiting for a run...</strong>
+          <span id="hud-quest-phase">No active Quest</span>
+        </div>
+        <div class="hud-stat"><span class="hud-stat-label">Gate</span><strong id="hud-gate-state">—</strong></div>
+        <div class="hud-stat"><span class="hud-stat-label">Quests</span><strong id="hud-quest-count">—</strong></div>
+        <button class="hud-action" data-panel="guild" type="button">Open Guild <span aria-hidden="true">→</span></button>
+      </section>
+
+      <nav class="bottom-nav" aria-label="World navigation">
+        <button class="nav-item is-active" data-panel="camp" type="button"><span aria-hidden="true">⌂</span><small>World</small></button>
+        <button class="nav-item" data-panel="guild" type="button"><span aria-hidden="true">✧</span><small>Quests</small></button>
+        <button class="nav-item" data-panel="chronicle" type="button"><span aria-hidden="true">▤</span><small>Chronicle</small></button>
+        <button class="nav-item" data-panel="settings" type="button"><span aria-hidden="true">⚙</span><small>Settings</small></button>
+      </nav>
+    </div>
+
+    <div class="return-overlay is-hidden" id="return-overlay" role="dialog" aria-modal="true" aria-labelledby="return-title">
+      <div class="return-backdrop"></div>
+      <div class="return-card card">
+        <div class="return-kicker"><span class="return-orbit" aria-hidden="true">✦</span><span>RETURN SIGNAL</span></div>
+        <h2 id="return-title">The world remembers.</h2>
+        <p id="return-subtitle">A meaningful run returned to camp.</p>
+        <div class="return-highlights" id="return-highlights"></div>
+        <button class="primary-button" id="enter-world" type="button">Enter the world <span aria-hidden="true">→</span></button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <svg class="grain" aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <filter id="grain-filter"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter>
+      <rect width="100%" height="100%" filter="url(#grain-filter)"></rect>
+    </svg>
+    <script type="module" src="/app.mjs"></script>
+  </body>
+</html>

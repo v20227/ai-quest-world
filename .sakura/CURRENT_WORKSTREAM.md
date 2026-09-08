@@ -1,8 +1,8 @@
-# Current Workstream: Persistent World State Boundary
+# Current Workstream: Web World Presentation Boundary
 
 ## Outcome
 
-Turn normalized runtime events and resolved progression into one restart-safe World State projection. The Game Core remains the only writer of building, unlock, activity, and cumulative progression state; the Web layer will consume this state later.
+Turn the authoritative World State and Quest/progression read models into a world-first local Web scene. The Game Core remains the only writer of building, unlock, activity, and cumulative progression state; the Web layer presents the returned state and never recalculates game outcomes.
 
 ## Acceptance
 
@@ -41,6 +41,8 @@ Turn normalized runtime events and resolved progression into one restart-safe Wo
 | WORLD-PERSIST-01 | SQLite World State row and applied-input idempotency store | `storage/sqlite` | WORLD-01 | W6-W7 | Complete |
 | WORLD-READ-01 | Durable Quest and progression read models | `storage/sqlite` | QUEST-INT-01, PROGRESSION-INT-01 | W4, W6 | Complete |
 | WORLD-INT-01 | Main-branch integration and restart/scope review | Repository | WORLD-01, WORLD-PERSIST-01, WORLD-READ-01 | W1-W8 | Complete |
+| WORLD-WEB-01 | World Scene, Mini HUD, contextual panels, and Return Overlay | `apps/world-web` | WORLD-INT-01 | G6 presentation slice | Complete |
+| WORLD-WEB-02 | Wire the Web endpoint to SQLite-backed read models and live Observer flow | `apps/world-web` / `storage/sqlite` | WORLD-WEB-01 | G6 live read-model checks | Next |
 
 ## Repair history
 
@@ -54,6 +56,8 @@ G0-G5 and E1-E8 remain green. W1-W8 pass for the persistent World State slice.
 
 The persistent World State slice is complete: fresh-state, active/returning Gate, credible unlock, negative-evidence, duplicate replay, SQLite restart, temporary activity decay, milestone hooks, durable read models, and highlight-budget fixtures pass together.
 
+The first Web presentation slice is also complete: the scene is world-first, desktop uses a contextual side panel, narrow screens use an accessible bottom drawer/navigation, and the Return Overlay exposes only bounded World State highlights. The endpoint is deliberately deterministic while the live SQLite-backed adapter flow remains the next item.
+
 ## Exact next action
 
-Define the smallest world-centric Web presentation slice that reads authoritative World State without creating a second game-state authority.
+Wire the existing SQLite World State and Quest/progression read models behind the Web presentation without moving any game rules into the browser.

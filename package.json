@@ -10,7 +10,10 @@
     "test:quest": "node --test tests/ai-quest-world/quest.test.mjs",
     "test:progression": "node --test tests/ai-quest-world/progression.test.mjs",
     "test:world": "node --test tests/ai-quest-world/world-state.test.mjs",
-    "test:read-model": "node --test tests/ai-quest-world/read-model.test.mjs"
+    "test:read-model": "node --test tests/ai-quest-world/read-model.test.mjs",
+    "test:web": "node --test tests/ai-quest-world/web.test.mjs",
+    "dev": "node apps/world-web/server.mjs",
+    "start": "node apps/world-web/server.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

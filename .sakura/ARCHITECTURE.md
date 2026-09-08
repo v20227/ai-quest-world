@@ -99,7 +99,7 @@ tests/ai-quest-world/
 - `core/semantic` will own work-semantic interpretation after Phase 1.
 - `core/game` will own Quest, outcome, reward, growth, artifact, and world state after Phase 1.
 - `storage/sqlite` will own durable repositories after Phase 1.
-- `apps/world-web` will own presentation after the authoritative state path exists.
+- `apps/world-web` will own presentation after the authoritative state path exists. The initial Web slice serves a deterministic simulated read model through `/api/demo` so the visual contract can be verified without a live harness. The next Web item may replace the demo provider with SQLite-backed read models, but must keep the browser read-only and must not duplicate World State, Quest, or progression rules.
 
 ## Dependency direction
 

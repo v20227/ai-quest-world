@@ -95,7 +95,15 @@ The local runtime uses Node's built-in SQLite and test runner; no third-party de
 npm test
 ```
 
-The test command covers the Phase 1 protocol/adapter/observer suite, the Milestone 2 normalized event persistence suite, the deterministic Semantic Engine suite, the Quest lifecycle/outcome suite, the evidence-bounded progression/anti-abuse suite, the persistent World State suite, and the Quest/progression read-model suite.
+The test command covers the Phase 1 protocol/adapter/observer suite, the Milestone 2 normalized event persistence suite, the deterministic Semantic Engine suite, the Quest lifecycle/outcome suite, the evidence-bounded progression/anti-abuse suite, the persistent World State suite, the Quest/progression read-model suite, and the Web presentation contract suite.
+
+To preview the current world-first Web slice locally:
+
+```sh
+npm run dev
+```
+
+Then open `http://127.0.0.1:4173`. The preview serves a deterministic simulated return through `/api/demo`; the browser only renders the authoritative World State, Quest, and progression read model returned by that endpoint. The real harness adapter and SQLite-backed live API remain later v0.1 milestones.
 
 ## Before implementation
 

@@ -1,6 +1,6 @@
 # State
 
-- Current milestone: Milestone 4/G6, Web Pixel World — ready to start
-- Current item: WORLD-WEB-01 — world-centric read-only Web presentation
-- Exact next action: Build the smallest persistent World Scene, Mini HUD, contextual panels, and Return Overlay from the authoritative World State/read models.
+- Current milestone: Milestone 4/G6, Web Pixel World — presentation slice complete
+- Current item: WORLD-WEB-02 — SQLite-backed live Web read-model wiring
+- Exact next action: Serve the existing SQLite World State and Quest/progression read models through the local Web endpoint, preserving the browser as a read-only renderer.
 - Blockers: None. GitHub remote is configured; the main integration path owns commits and pushes.
