@@ -29,6 +29,7 @@ const ui = {
   selectedPanel: "camp",
   selectedQuestId: null,
   selectedArtifactId: null,
+  selectedDomain: null,
   source: initialSource(),
   mode: "canonical",
   toastTimer: null,
@@ -44,7 +45,7 @@ const ui = {
   panelFocus: null
 };
 
-const BUILDING_PANELS = new Set(["gate", "guild", "workshop", "library", "camp", "chronicle", "settings", "quest", "artifact"]);
+const BUILDING_PANELS = new Set(["gate", "guild", "workshop", "library", "camp", "chronicle", "settings", "quest", "artifact", "artifacts", "domain"]);
 
 init();
 
@@ -63,7 +64,17 @@ async function init() {
 }
 
 function bindEvents() {
+  document.querySelector("#quest-picker")?.addEventListener("change", event => {
+    selectBoardQuest(event.target.value);
+  });
   document.addEventListener("click", (event) => {
+    const runTrigger = event.target.closest("[data-select-quest]");
+    if (runTrigger && ui.snapshot) {
+      selectBoardQuest(runTrigger.dataset.selectQuest);
+      return;
+    }
+    const domainTrigger = event.target.closest("[data-domain]");
+    if (domainTrigger) { ui.selectedDomain = domainTrigger.dataset.domain; selectPanel("domain"); return; }
     const originalTrigger = event.target.closest("[data-open-artifact]");
     if (originalTrigger !== null) { openArtifact(originalTrigger.dataset.openArtifact); return; }
     const panelTrigger = event.target.closest("[data-panel]");
@@ -75,6 +86,7 @@ function bindEvents() {
     const questTrigger = event.target.closest("[data-quest-id]");
     if (questTrigger !== null) {
       ui.selectedQuestId = questTrigger.dataset.questId;
+      if (ui.snapshot) renderGuildScene(ui.snapshot, document, ui.selectedQuestId);
       selectPanel("quest");
       return;
     }
@@ -185,7 +197,7 @@ async function loadSnapshot(mode = ui.mode, { showReturn = true, silent = false 
 }
 
 function renderWorld(snapshot) {
-  renderGuildScene(snapshot);
+  renderGuildScene(snapshot, document, ui.selectedQuestId);
   const { world, quests } = snapshot;
   const quest = currentQuest(quests) ?? null;
   refs.hudQuestTitle.textContent = quest?.title ?? "Waiting for a run...";
@@ -259,12 +271,26 @@ function closePanel() {
   else refs.reloadButton.focus({ preventScroll: true });
 }
 
+function selectBoardQuest(id) {
+  ui.selectedQuestId = id;
+  if (!ui.snapshot) return;
+  renderGuildScene(ui.snapshot, document, id);
+  if (ui.selectedPanel === "quest" && refs.contextShell.classList.contains("is-open")) selectPanel("quest", { keepMobileOpen: false });
+}
+
 function syncPanelAccess() {
   refs.contextShell.inert = !refs.contextShell.classList.contains("is-open");
 }
 
 function panelDefinition(panel) {
   switch (panel) {
+    case "artifacts":
+      return { eyebrow: "ARTIFACTS / REAL OUTPUTS", title: "Artifact archive", render: snapshot => {
+        const artifacts = allArtifacts(snapshot.progressions, snapshot.quests);
+        return `<p class="panel-lede">${artifacts.length} observed references across your Quests.</p>${artifacts.length ? artifacts.map(artifactItemMarkup).join("") : emptyMarkup("No real artifacts have been recorded yet.")}`;
+      } };
+    case "domain":
+      return { eyebrow: "DOMAIN / PERMANENT GROWTH", title: ui.selectedDomain ?? "Domain", render: renderDomainPanel };
     case "gate":
       return { eyebrow: "AI GATE / CONNECTION", title: "The signal is open.", render: renderGatePanel };
     case "guild":
@@ -305,6 +331,13 @@ function renderCampPanel(snapshot) {
     </div>
     ${progression === undefined ? "" : `<div class="panel-action-row"><button class="secondary-button" data-panel="guild" type="button">Open Quest Guild <span aria-hidden="true">→</span></button></div>`}
   `;
+}
+
+function renderDomainPanel(snapshot) {
+  const domain = ui.selectedDomain;
+  const value = snapshot.world.progression_totals.domain_progress[domain] ?? 0;
+  const quests = snapshot.quests.filter(quest => (quest.activity_mix[domain] ?? 0) > 0);
+  return `<p class="panel-lede">Permanent growth from meaningful work. This is domain progress, not an equipment bonus or a skill prerequisite.</p><div class="detail-card"><div class="progress-label"><span>${escapeHtml(domain)}</span><strong>${value}/100</strong></div>${meter(value)}</div><div class="quest-list">${quests.length ? quests.map(questItemMarkup).join("") : emptyMarkup("No related work has been observed yet.")}</div>`;
 }
 
 function renderGatePanel(snapshot) {

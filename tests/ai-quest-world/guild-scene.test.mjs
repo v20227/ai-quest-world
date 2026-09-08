@@ -2,7 +2,38 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { buildDemoSnapshot, createWorldWebServer } from "../../apps/world-web/server.mjs";
-import { guildSceneModel } from "../../apps/world-web/guild-scene.mjs";
+import { guildSceneModel, desktopGuildModel } from "../../apps/world-web/guild-scene.mjs";
+
+test("desktop selection preserves historical Quest and actual run identities", () => {
+  const snapshot = buildDemoSnapshot();
+  const historical = structuredClone(snapshot.quests[0]);
+  historical.quest_id = "historical";
+  historical.title = "Historical delivery";
+  snapshot.quests.push(historical);
+  assert.equal(guildSceneModel(snapshot, "historical").title, "Historical delivery");
+  const model = desktopGuildModel(snapshot, "historical");
+  assert.equal(model.selectedId, "historical");
+  assert.deepEqual(model.runs.slice(0, snapshot.quests[0].run_ids.length).map(run => run.id), snapshot.quests[0].run_ids);
+  assert.equal(model.domains.length, 6);
+  for (const domain of model.domains) assert.equal(domain.value, snapshot.world.progression_totals.domain_progress[domain.name]);
+});
+
+test("desktop models do not infer unknown run outcome or parent edges", () => {
+  const snapshot = buildDemoSnapshot();
+  snapshot.world.active_run_ids = [snapshot.quests[0].run_ids[0]];
+  const model = desktopGuildModel(snapshot);
+  assert.equal(model.runs.find(run => run.id === snapshot.world.active_run_ids[0]).status, "Active");
+  assert.ok(model.runs.some(run => run.relationship.includes("parent unavailable")));
+  assert.ok(model.runs.filter(run => !snapshot.world.active_run_ids.includes(run.id)).every(run => run.status === "Not active · outcome in Quest"));
+});
+
+test("empty desktop world has no fabricated roster, growth or artifacts", () => {
+  const model = desktopGuildModel({world:{},quests:[],progressions:[]});
+  assert.equal(model.selectedId,null);
+  assert.deepEqual(model.runs,[]);
+  assert.deepEqual(model.artifacts,[]);
+  assert.ok(model.domains.every(domain=>domain.value===0));
+});
 
 test("guild scene uses authoritative rewards and leaves its snapshot unchanged", () => {
   const snapshot = buildDemoSnapshot();
