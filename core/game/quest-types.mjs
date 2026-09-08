@@ -91,6 +91,14 @@ export function validateQuest(value, path = "quest") {
   validateArtifactRefs(quest.artifact_refs, `${path}.artifact_refs`);
   assertTimestamp(quest.created_at, `${path}.created_at`);
   assertTimestamp(quest.updated_at, `${path}.updated_at`);
+  if (quest.settlement_snapshot !== undefined) {
+    const settlement = assertPlainRecord(quest.settlement_snapshot, `${path}.settlement_snapshot`);
+    if (settlement.settlement_snapshot !== undefined) throw new QuestValidationError(path, "settlement cannot be nested");
+    validateQuest(settlement, `${path}.settlement_snapshot`);
+    if (settlement.quest_id !== quest.quest_id || settlement.root_run_id !== quest.root_run_id || !["COMPLETED", "FAILED", "CANCELLED"].includes(settlement.status)) {
+      throw new QuestValidationError(path, "settlement must be terminal and belong to this Quest");
+    }
+  }
 
   return quest;
 }

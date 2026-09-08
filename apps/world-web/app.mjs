@@ -1,3 +1,5 @@
+import { currentQuest, recentQuests, allArtifacts, artifactKey, unseenReturns } from "./view-state.mjs";
+
 const refs = {
   body: document.body,
   connectionChip: document.querySelector("#connection-chip"),
@@ -28,7 +30,13 @@ const ui = {
   selectedArtifactId: null,
   source: initialSource(),
   mode: "canonical",
-  toastTimer: null
+  toastTimer: null,
+  loading: false,
+  generation: 0,
+  pendingReturns: [],
+  seenReturns: restoreSeenReturns(),
+  activeReturn: null,
+  returnTimer: null
 };
 
 const BUILDING_PANELS = new Set(["gate", "guild", "workshop", "library", "camp", "chronicle", "settings", "quest", "artifact"]);
@@ -39,6 +47,12 @@ async function init() {
   restorePreferences();
   bindEvents();
   await loadSnapshot();
+  window.setInterval(() => {
+    if (ui.source === "live" && !document.hidden && !ui.loading) loadSnapshot(ui.mode, { silent: true });
+  }, 2000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && ui.source === "live") loadSnapshot(ui.mode, { silent: true });
+  });
 }
 
 function bindEvents() {
@@ -73,7 +87,7 @@ function bindEvents() {
     const sourceTrigger = event.target.closest("[data-source]");
     if (sourceTrigger !== null) {
       setSource(sourceTrigger.dataset.source);
-      loadSnapshot(ui.mode, { showReturn: ui.source === "demo" });
+      loadSnapshot(ui.mode);
       return;
     }
 
@@ -88,7 +102,7 @@ function bindEvents() {
     }
 
     if (event.target.closest("#reload-demo") !== null) {
-      loadSnapshot(ui.mode, { showReturn: ui.source === "demo" });
+      loadSnapshot(ui.mode);
       return;
     }
 
@@ -113,10 +127,14 @@ function bindEvents() {
   });
 }
 
-async function loadSnapshot(mode = ui.mode, { showReturn = true } = {}) {
+async function loadSnapshot(mode = ui.mode, { showReturn = true, silent = false } = {}) {
+  const generation = ++ui.generation;
+  ui.loading = true;
   ui.mode = mode;
-  setConnection("Connecting", false);
-  refs.sceneStatus.textContent = "Restoring signal...";
+  if (!silent) {
+    setConnection("Connecting", false);
+    refs.sceneStatus.textContent = "Restoring signal...";
+  }
   if (ui.snapshot === null) {
     showLoading();
   }
@@ -125,30 +143,38 @@ async function loadSnapshot(mode = ui.mode, { showReturn = true } = {}) {
     const endpoint = ui.source === "live"
       ? "/api/world"
       : `/api/demo?mode=${encodeURIComponent(mode)}`;
-    const response = await fetch(endpoint, { cache: "no-store" });
+    const response = await fetch(endpoint, { cache: "no-store", signal: AbortSignal.timeout(8000) });
     if (!response.ok) {
       throw new Error(`World data returned ${response.status}`);
     }
     const snapshot = await response.json();
+    if (generation !== ui.generation) return;
+    snapshot.quests = recentQuests(snapshot.quests);
     ui.snapshot = snapshot;
-    setConnection("Connected", false);
+    setConnection(ui.source === "live" ? "World ready" : "Demo", false);
     renderWorld(snapshot);
     selectPanel(ui.selectedPanel, { keepMobileOpen: false });
-    if (showReturn && snapshot.world.return_highlights.length > 0) {
-      showReturnOverlay(snapshot);
+    if (showReturn && ui.source === "live") {
+      ui.pendingReturns.push(...unseenReturns(snapshot.world, ui.seenReturns, ui.pendingReturns));
+      showNextReturn();
+    } else if (showReturn && snapshot.world.return_highlights.length > 0) {
+      showReturnOverlay({ title: currentQuest(snapshot.quests)?.title, highlights: snapshot.world.return_highlights });
     }
   } catch (error) {
+    if (generation !== ui.generation) return;
     console.error(error);
     setConnection("Offline", true);
     refs.sceneStatus.textContent = "Signal unavailable — retry when ready";
-    renderError();
-    showToast("The world signal could not be reached. Try again.");
+    if (ui.snapshot === null) renderError();
+    if (!silent) showToast("The world signal could not be reached. Try again.");
+  } finally {
+    if (generation === ui.generation) ui.loading = false;
   }
 }
 
 function renderWorld(snapshot) {
   const { world, quests } = snapshot;
-  const quest = quests[0] ?? null;
+  const quest = currentQuest(quests) ?? null;
   refs.hudQuestTitle.textContent = quest?.title ?? "Waiting for a run...";
   refs.hudQuestPhase.textContent = quest === null
     ? "No active Quest"
@@ -172,7 +198,7 @@ function renderWorld(snapshot) {
     }
     object.classList.toggle("is-locked", state === "LOCKED" || state === "OLD" || state === "DORMANT");
     object.classList.toggle("is-unlocked", state !== "LOCKED" && state !== "OLD" && state !== "DORMANT");
-    object.classList.toggle("is-active", state === "ACTIVE" || state === "RETURNING" || state === "RESTORED");
+    object.classList.toggle("is-active", ["ACTIVE", "BUSY", "RETURNING", "MILESTONE"].includes(state));
     const status = object.querySelector(`[data-status-for="${building}"]`);
     if (status !== null) {
       status.textContent = labelize(state);
@@ -195,7 +221,7 @@ function selectPanel(panel, { keepMobileOpen = true } = {}) {
   refs.panelEyebrow.textContent = definition.eyebrow;
   refs.panelTitle.textContent = definition.title;
   refs.panelContent.innerHTML = ui.snapshot === null ? loadingMarkup() : definition.render(ui.snapshot);
-  if (keepMobileOpen || window.matchMedia("(max-width: 620px)").matches) {
+  if (keepMobileOpen) {
     refs.contextShell.classList.add("is-open");
   }
 }
@@ -284,9 +310,8 @@ function renderGuildPanel(snapshot) {
 function renderBuildingPanel(snapshot, buildingName) {
   const { world, progressions } = snapshot;
   const building = world[buildingName];
-  const progression = progressions[0];
   const domainEntries = Object.entries(building.domain_progress);
-  const artifacts = (progression?.loot_refs ?? []).filter((artifact) => buildingName === "workshop"
+  const artifacts = allArtifacts(progressions, snapshot.quests).filter((artifact) => buildingName === "workshop"
     ? ["code", "validation", "automation"].includes(artifact.kind)
     : ["research", "plan", "document"].includes(artifact.kind));
   return `
@@ -312,13 +337,13 @@ function renderBuildingPanel(snapshot, buildingName) {
 }
 
 function renderQuestPanel(snapshot) {
-  const quest = snapshot.quests.find((candidate) => candidate.quest_id === ui.selectedQuestId) ?? snapshot.quests[0];
+  const quest = snapshot.quests.find((candidate) => candidate.quest_id === ui.selectedQuestId) ?? currentQuest(snapshot.quests);
   if (quest === undefined) {
     return emptyMarkup("No Quest is available yet.");
   }
   const progression = snapshot.progressions.find((candidate) => candidate.quest_id === quest.quest_id);
   return `
-    <p class="panel-lede">A Quest is a real run with a readable shape: the evidence stays factual, while the world gives it a little room to matter.</p>
+    <p class="panel-lede">A Quest gathers the runs working toward one real goal. Evidence stays factual; the world remembers the result.</p>
     <div class="insight-card">
       <div class="evidence-head"><h3 class="evidence-title">${escapeHtml(quest.title)}</h3>${confidenceBadge(quest.outcome_confidence)}</div>
       <div class="detail-line"><span>Lifecycle</span><strong>${labelize(quest.status)}</strong></div>
@@ -339,13 +364,13 @@ function renderQuestPanel(snapshot) {
       <div class="detail-line"><span>Domain progress</span><strong>${progression === undefined ? "Pending" : formatDomainTotal(progression.domain_progress)}</strong></div>
       <div class="detail-line"><span>Real artifacts</span><strong>${progression?.loot_refs.length ?? 0}</strong></div>
     </div>
-    ${quest.artifact_refs.map(artifactItemMarkup).join("")}
+    ${allArtifacts(snapshot.progressions, [quest]).filter(artifact => artifact.source_quest_id === quest.quest_id).map(artifactItemMarkup).join("")}
   `;
 }
 
 function renderArtifactPanel(snapshot) {
-  const artifacts = snapshot.progressions.flatMap((progression) => progression.loot_refs);
-  const artifact = artifacts.find((candidate) => candidate.artifact_id === ui.selectedArtifactId) ?? artifacts[0];
+  const artifacts = allArtifacts(snapshot.progressions, snapshot.quests);
+  const artifact = artifacts.find((candidate) => artifactKey(candidate) === ui.selectedArtifactId) ?? artifacts[0];
   if (artifact === undefined) {
     return emptyMarkup("No real artifact has been recorded yet.");
   }
@@ -358,6 +383,7 @@ function renderArtifactPanel(snapshot) {
     <div class="detail-card">
       <div class="detail-line"><span>Reference</span><strong>${escapeHtml(artifact.uri_or_path ?? "Evidence reference")}</strong></div>
       <div class="detail-line"><span>Source Quest</span><strong>${escapeHtml(artifact.source_quest_id)}</strong></div>
+      <div class="detail-line"><span>Settlement</span><strong>${artifact.rewarded ? "Included in settled loot" : "Observed reference · no extra reward"}</strong></div>
       <div class="detail-line"><span>Evidence refs</span><strong>${artifact.evidence_refs?.length ?? 0}</strong></div>
     </div>
   `;
@@ -422,19 +448,41 @@ function loadingMarkup() {
   return `<div class="loading-stack" aria-label="Loading"><span></span><span></span><span></span></div>`;
 }
 
-function showReturnOverlay(snapshot) {
-  const highlights = snapshot.world.return_highlights ?? [];
+function showReturnOverlay(entry) {
+  clearTimeout(ui.returnTimer);
+  const highlights = entry.highlights ?? [];
   refs.returnTitle.textContent = highlights.some((item) => item.kind === "milestone_unlocked")
     ? "The world changed."
     : "The world remembers.";
-  refs.returnSubtitle.textContent = `${snapshot.quests[0]?.title ?? "A meaningful run"} returned to camp.`;
+  refs.returnSubtitle.textContent = `${entry.title ?? "A meaningful run"} returned to camp.`;
   refs.returnHighlights.innerHTML = highlights.map((item) => `<div class="return-highlight"><span>${escapeHtml(item.label)}</span></div>`).join("");
   refs.returnOverlay.classList.remove("is-hidden");
   window.setTimeout(() => refs.enterWorld.focus(), 0);
+  ui.returnTimer = window.setTimeout(hideReturnOverlay, 4500);
 }
 
 function hideReturnOverlay() {
+  clearTimeout(ui.returnTimer);
+  ui.activeReturn = null;
   refs.returnOverlay.classList.add("is-hidden");
+  showNextReturn();
+}
+
+function showNextReturn() {
+  if (ui.source !== "live" || document.hidden || ui.activeReturn !== null) return;
+  const next = ui.pendingReturns.shift();
+  if (!next) return;
+  ui.activeReturn = next;
+  ui.seenReturns.add(next.return_id);
+  try { localStorage.setItem("ai-quest-world-seen-returns", JSON.stringify([...ui.seenReturns])); } catch { /* Keep the current session cursor. */ }
+  showReturnOverlay(next);
+}
+
+function restoreSeenReturns() {
+  try {
+    const values = JSON.parse(localStorage.getItem("ai-quest-world-seen-returns") ?? "[]");
+    return new Set(Array.isArray(values) ? values.filter(value => typeof value === "string") : []);
+  } catch { return new Set(); }
 }
 
 function toggleTheme() {
@@ -486,8 +534,8 @@ function questSummaryMarkup(quest) {
 }
 
 function artifactItemMarkup(artifact) {
-  const id = artifact.artifact_id ?? "artifact";
-  return `<button class="artifact-card" data-artifact-id="${escapeAttribute(id)}" type="button"><span class="artifact-icon" aria-hidden="true">✦</span><span><span class="artifact-name">${escapeHtml(artifact.name ?? id)}</span><span class="artifact-meta">${labelize(artifact.kind)} · real reference</span></span></button>`;
+  const id = artifactKey(artifact);
+  return `<button class="artifact-card" data-artifact-id="${escapeAttribute(id)}" type="button"><span class="artifact-icon" aria-hidden="true">✦</span><span><span class="artifact-name">${escapeHtml(artifact.name ?? artifact.artifact_id)}</span><span class="artifact-meta">${labelize(artifact.kind)} · real reference</span></span></button>`;
 }
 
 function milestoneMarkup(milestone) {
@@ -563,6 +611,10 @@ function initialSource() {
 
 function setSource(source) {
   ui.source = source === "demo" ? "demo" : "live";
+  clearTimeout(ui.returnTimer);
+  ui.activeReturn = null;
+  ui.pendingReturns = [];
+  refs.returnOverlay.classList.add("is-hidden");
   const url = new URL(window.location.href);
   if (ui.source === "demo") {
     url.searchParams.set("source", "demo");
