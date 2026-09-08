@@ -16,9 +16,18 @@ const PUBLIC_FILES = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
+  ["/guild-desktop.css", ["guild-desktop.css", "text/css; charset=utf-8"]],
   ["/app.mjs", ["app.mjs", "text/javascript; charset=utf-8"]],
   ["/view-state.mjs", ["view-state.mjs", "text/javascript; charset=utf-8"]],
   ["/guild-scene.mjs", ["guild-scene.mjs", "text/javascript; charset=utf-8"]],
+  ["/scene-assets.mjs", ["scene-assets.mjs", "text/javascript; charset=utf-8"]],
+  ["/pixel-composition.mjs", ["pixel-composition.mjs", "text/javascript; charset=utf-8"]],
+  ["/asset-preview.mjs", ["asset-preview.mjs", "text/javascript; charset=utf-8"]],
+  ["/character-preferences.mjs", ["character-preferences.mjs", "text/javascript; charset=utf-8"]],
+  ["/scene-motion.mjs", ["scene-motion.mjs", "text/javascript; charset=utf-8"]],
+  ["/scene-frames.mjs", ["scene-frames.mjs", "text/javascript; charset=utf-8"]],
+  ["/scene-objects.mjs", ["scene-objects.mjs", "text/javascript; charset=utf-8"]],
+  ["/workshop-display.mjs", ["workshop-display.mjs", "text/javascript; charset=utf-8"]],
 ]);
 
 const ASSET_DIRECTORY = resolve(APP_DIRECTORY, "../../assets");
@@ -159,7 +168,7 @@ async function handleRequest(request, response, runtime, artifactRoot) {
       return;
     }
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-    response.end(JSON.stringify({ ...runtime.getSnapshot({ at: new Date().toISOString() }), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
+    response.end(JSON.stringify({ ...runtime.getSnapshot({ at: new Date().toISOString() }), display_namespace: runtime.getDisplayNamespace(), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
     return;
   }
 

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#141b2a"><meta name="description" content="AI 任务世界——让真实工作留下值得归来的世界。"><title>AI 任务世界</title><link rel="preload" as="image" href="/assets/pixel/guild/hall-interior.png"><link rel="stylesheet" href="/styles.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#141b2a"><meta name="description" content="AI 任务世界——让真实工作留下值得归来的世界。"><title>AI 任务世界</title><link rel="preload" as="image" href="/assets/pixel/guild/guild-room.png"><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/guild-desktop.css"></head>
 <body data-theme="dusk">
 <div class="app-shell">
 <header class="topbar">
@@ -10,11 +10,42 @@
 <main class="world-layout">
 <section class="world-card" aria-labelledby="world-title">
 <div class="world-scene" id="world-scene" aria-label="像素公会世界场景">
-<img class="hall-environment" src="/assets/pixel/guild/hall-interior.png" alt="像素公会大厅，包含图书馆、工作台、蓝色传送门和地图桌" fetchpriority="high">
+<img class="hall-environment" src="/assets/pixel/guild/guild-room.png" alt="暖灯照亮的像素公会大厅，窗外是远方城堡，书架与地图桌环绕着远征任务板" fetchpriority="high">
 <div class="hall-light hall-light-left" aria-hidden="true"></div><div class="hall-light hall-light-right" aria-hidden="true"></div>
 <div class="scene-heading"><p class="eyebrow">让真实工作构筑你的世界</p><h1 id="world-title">AI 任务世界</h1><p class="scene-subtitle">每一次真实的冒险，都会留下足迹。</p></div>
-<div class="desktop-composition"><section class="roster-panel game-frame" aria-labelledby="roster-title"><div class="game-panel-heading"><h2 id="roster-title">远征队伍</h2><span id="roster-count">0 次运行</span></div><div id="desktop-roster"></div><p id="agent-identities"></p><button class="secondary-button" data-panel="gate" type="button">查看连接 →</button></section><section class="quest-board" aria-labelledby="board-title"><div class="board-ribbon"><span id="board-kind">远征记录</span><span aria-hidden="true">✦</span></div><div class="board-body"><label class="quest-picker-label" for="quest-picker">任务档案<select id="quest-picker" aria-label="选择任务"></select></label><p class="eyebrow" id="board-domain">下一章</p><h2 id="board-title">你的世界正在苏醒。</h2><p id="board-description">正在连接你的本地世界…</p><div class="board-facts" id="board-facts"></div><div class="board-validation" id="board-validation"></div><div class="board-phases" id="board-phases" aria-label="已观测到的工作阶段"></div><button class="primary-button" id="board-open" data-panel="quest" type="button" disabled>查看远征 →</button></div></section>
-<section class="growth-panel game-frame" aria-labelledby="growth-title"><div class="game-panel-heading"><h2 id="growth-title">领域成长</h2></div><div id="domain-grid"></div><div class="game-panel-heading artifact-heading"><h2>工作成果</h2><button class="text-button" data-panel="artifacts" type="button">查看全部 →</button></div><div id="desktop-artifacts"></div></section></div><section class="atlas-panel game-frame" aria-label="世界地图"><div class="game-panel-heading"><h2>世界地图</h2><span>每一份工作，都留下足迹</span></div><div class="atlas-illustration"></div></section><section class="expedition-plaque" aria-labelledby="expedition-label"><p class="eyebrow" id="expedition-label">公会动态</p><div id="expedition-list"><p class="muted">等待新信号…</p></div></section>
+<div class="desktop-composition">
+  <section class="roster-panel game-frame" aria-labelledby="roster-title">
+    <div class="game-panel-heading"><h2 id="roster-title">远征队伍 <small>/ 运行档案</small></h2><span id="roster-count">0 次运行</span></div>
+    <div id="desktop-roster"></div><p id="agent-identities"></p>
+    <button class="secondary-button" data-panel="gate" type="button">查看公会连接 →</button>
+  </section>
+  <section class="quest-board" aria-labelledby="board-title">
+    <div class="board-ribbon"><span id="board-kind">远征记录</span><span>每一次努力，都有归处。</span></div>
+    <div class="board-body">
+      <div class="quest-hero">
+        <div class="quest-hero-art" aria-hidden="true"></div>
+        <span class="quest-emblem pixel-icon" data-icon="0" aria-hidden="true"></span>
+        <div class="quest-hero-copy"><p class="eyebrow" id="board-domain">下一章</p><h2 id="board-title">你的世界正在苏醒。</h2><p id="board-description">正在连接你的本地世界…</p></div>
+      </div>
+      <div class="quest-difficulty"><span>远征难度</span><span id="board-difficulty">等待观测</span></div>
+      <div class="board-facts" id="board-facts"></div>
+      <div class="board-evidence"><div class="board-validation" id="board-validation"></div><progress id="board-evidence-progress" aria-label="验证通过比例" max="1" hidden></progress></div>
+      <div class="phase-heading"><h3>远征足迹</h3><span>当前观测阶段</span></div>
+      <div class="board-phases" id="board-phases" aria-label="当前观测阶段"></div>
+      <div class="board-actions"><label class="quest-picker-label" for="quest-picker"><span>任务档案</span><select id="quest-picker" aria-label="选择任务"></select></label><button class="primary-button" id="board-open" data-panel="quest" type="button" disabled>查看远征 →</button></div>
+    </div>
+  </section>
+  <section class="growth-panel game-frame" aria-labelledby="growth-title">
+    <div class="game-panel-heading"><h2 id="growth-title" aria-label="领域成长">成长星图 <small>/ 工作领域</small></h2></div>
+    <div id="domain-grid" aria-label="六个独立工作领域的成长"></div>
+    <div class="game-panel-heading artifact-heading"><h2>成果陈列</h2><button class="text-button" data-panel="artifacts" type="button">查看全部 →</button></div><div id="desktop-artifacts"></div>
+  </section>
+</div>
+<section class="atlas-panel game-frame" aria-label="世界地图">
+  <div class="game-panel-heading"><h2>世界地图 <small>/ 小小营地</small></h2><span>真实工作留下的足迹</span></div>
+  <div class="atlas-illustration" aria-hidden="true"></div>
+</section>
+<section class="expedition-plaque" aria-labelledby="expedition-label"><p class="eyebrow" id="expedition-label">公会动态</p><div id="expedition-list"><p class="muted">等待新信号…</p></div></section>
 <button class="world-object object-library" data-panel="library" type="button" aria-label="打开图书馆面板"><span class="location-mark" aria-hidden="true">I</span><span class="object-copy"><strong>图书馆</strong><small data-status-for="library">未解锁</small></span></button>
 <button class="world-object object-workshop" data-panel="workshop" type="button" aria-label="打开工坊面板"><span class="location-mark" aria-hidden="true">II</span><span class="object-copy"><strong>工坊</strong><small data-status-for="workshop">未解锁</small></span></button>
 <button class="world-object object-gate" data-panel="gate" type="button" aria-label="打开 AI 传送门面板"><span class="location-mark" aria-hidden="true">III</span><span class="object-copy"><strong>AI 传送门</strong><small data-status-for="gate">休眠</small></span></button>
@@ -24,7 +55,7 @@
 <div class="archivist-caption"><span id="archivist-state">档案管理员</span><small>在这里，收藏你的故事。</small></div>
 <div class="scene-hint">选择一处地点，探索你的世界</div>
 </div>
-<div class="scene-footer"><div class="scene-status"><span class="status-mark" aria-hidden="true"></span><span id="scene-status">正在恢复连接…</span></div><button class="text-button" id="reload-demo" type="button" aria-label="刷新世界"><span id="reload-label">刷新世界</span> ↻</button></div>
+<div class="scene-footer"><div class="scene-status"><span class="status-mark" aria-hidden="true"></span><span id="scene-status">正在恢复连接…</span></div><div class="scene-view-actions"><button class="text-button" id="scene-fit-toggle" type="button" aria-pressed="true">原尺寸查看</button><button class="text-button" id="reload-demo" type="button" aria-label="刷新世界"><span id="reload-label">刷新世界</span> ↻</button></div></div>
 </section>
 <aside class="context-shell" id="context-shell" aria-labelledby="panel-title" inert><div class="panel-topline"><p class="eyebrow" id="panel-eyebrow">世界视角</p><button class="close-button" id="close-panel" type="button" aria-label="关闭详情面板">×</button></div><h2 id="panel-title">正在加载世界…</h2><div class="panel-content" id="panel-content" aria-live="polite"><div class="loading-stack" aria-label="加载中"><span></span><span></span><span></span></div></div></aside>
 </main>

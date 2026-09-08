@@ -1,5 +1,6 @@
 import { currentQuest, recentQuests, allArtifacts, artifactKey, unseenReturns } from "./view-state.mjs";
 import { renderGuildScene, displayLabel, returnHighlightLabel } from "./guild-scene.mjs";
+import { createPixelComposition } from "./pixel-composition.mjs";
 
 const refs = {
   body: document.body,
@@ -46,6 +47,10 @@ const ui = {
 };
 
 const BUILDING_PANELS = new Set(["gate", "guild", "workshop", "library", "camp", "chronicle", "settings", "quest", "artifact", "artifacts", "domain"]);
+
+const pixelComposition = createPixelComposition(document, {
+  openArtifact: key => { ui.selectedArtifactId = key; selectPanel("artifact"); }
+});
 
 init();
 
@@ -138,6 +143,7 @@ function bindEvents() {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (document.querySelector(".display-drawer[open]")) return;
     if (event.key === "Tab" && !refs.returnOverlay.classList.contains("is-hidden")) {
       event.preventDefault(); refs.enterWorld.focus(); return;
     }
@@ -197,6 +203,7 @@ async function loadSnapshot(mode = ui.mode, { showReturn = true, silent = false 
 }
 
 function renderWorld(snapshot) {
+  pixelComposition.update(snapshot, ui.source);
   renderGuildScene(snapshot, document, ui.selectedQuestId);
   const { world, quests } = snapshot;
   const quest = currentQuest(quests) ?? null;
@@ -275,7 +282,8 @@ function selectBoardQuest(id) {
   ui.selectedQuestId = id;
   if (!ui.snapshot) return;
   renderGuildScene(ui.snapshot, document, id);
-  if (ui.selectedPanel === "quest" && refs.contextShell.classList.contains("is-open")) selectPanel("quest", { keepMobileOpen: false });
+  if (document.documentElement.clientWidth < 1180) selectPanel("quest");
+  else if (ui.selectedPanel === "quest" && refs.contextShell.classList.contains("is-open")) selectPanel("quest", { keepMobileOpen: false });
 }
 
 function syncPanelAccess() {
@@ -713,6 +721,7 @@ function initialSource() {
 }
 
 function setSource(source) {
+  pixelComposition.suspend();
   ui.source = source === "demo" ? "demo" : "live";
   clearTimeout(ui.returnTimer);
   ui.activeReturn = null;

@@ -59,6 +59,7 @@ export function guildSceneModel(snapshot, selectedQuestId = null) {
 export function renderGuildScene(snapshot, root = document, selectedQuestId = null) {
   const model = guildSceneModel(snapshot, selectedQuestId);
   renderDesktopPanels(snapshot, model.questId, root);
+  renderQuestIllustration(snapshot, model.questId, root);
   for (const [id, value] of Object.entries({ "board-title": model.title, "board-domain": model.domain, "board-description": model.description, "board-kind": model.kind, "archivist-state": model.active ? "远征进行中" : "档案管理员" })) root.getElementById(id).textContent = value;
   const facts = root.getElementById("board-facts");
   const signature = JSON.stringify(model);
@@ -67,9 +68,6 @@ export function renderGuildScene(snapshot, root = document, selectedQuestId = nu
   facts.replaceChildren(...model.facts.map(([name, value]) => {
     const item = root.createElement("span"); item.append(name);
     const strong = root.createElement("strong"); strong.textContent = value; item.append(strong); return item;
-  }));
-  root.getElementById("board-phases").replaceChildren(...model.phases.map(value => {
-    const stamp = root.createElement("span"); stamp.className = "phase-stamp"; stamp.textContent = value; return stamp;
   }));
   const open = root.getElementById("board-open");
   open.disabled = model.questId === null;
@@ -90,6 +88,56 @@ export function renderGuildScene(snapshot, root = document, selectedQuestId = nu
 }
 
 export const GUILD_DOMAINS = ["Research", "Planning", "Engineering", "Debugging", "Creation", "Automation"];
+
+function pixelIcon(root, index, className = "") {
+  const icon = root.createElement("span");
+  icon.className = `pixel-icon ${className}`;
+  icon.dataset.icon = String(index);
+  icon.setAttribute("aria-hidden", "true");
+  return icon;
+}
+
+function renderQuestIllustration(snapshot, selectedQuestId, root) {
+  const quest = snapshot.quests.find(item => item.quest_id === selectedQuestId);
+  const difficulty = root.getElementById("board-difficulty");
+  const value = quest?.difficulty?.observed ?? quest?.difficulty?.estimated;
+  if (difficulty) {
+    const known = Number.isInteger(value) && value >= 1 && value <= 5;
+    difficulty.textContent = known ? `${"★".repeat(value)}${"☆".repeat(5 - value)}` : "等待观测";
+    difficulty.setAttribute("aria-label", known ? `${quest.difficulty.observed != null ? "已观测" : "预估"}难度 ${value}/5` : "尚无难度信息");
+  }
+  const emblem = root.querySelector(".quest-emblem");
+  if (emblem) emblem.dataset.icon = String(Math.max(0, GUILD_DOMAINS.indexOf(quest?.primary_domain)));
+  const progress = root.getElementById("board-evidence-progress");
+  const validation = quest?.validation_summary;
+  if (progress) {
+    const passed = validation?.latest_passed;
+    const total = validation?.latest_total;
+    const known = Number.isFinite(passed) && Number.isFinite(total) && total > 0 && passed >= 0 && passed <= total;
+    progress.hidden = !known;
+    if (known) { progress.max = total; progress.value = passed; progress.setAttribute("aria-valuetext", `${passed}/${total} 通过`); }
+    else { progress.removeAttribute("value"); progress.removeAttribute("aria-valuetext"); }
+  }
+  const phases = root.getElementById("board-phases");
+  if (!phases) return;
+  const current = quest?.phase ?? null;
+  if (phases.dataset.phase === (current ?? "empty")) return;
+  phases.dataset.phase = current ?? "empty";
+  const slots = [
+    [current === "DEPART" ? "DEPART" : "EXPLORE", 0],
+    ["PLAN", 1], ["ACT", 2], ["VALIDATE", 3], ["RECOVER", 4],
+    [current === "RETURN" ? "RETURN" : "DELIVER", 5]
+  ];
+  phases.replaceChildren(...slots.map(([phase, iconIndex]) => {
+    const stamp = root.createElement("span"); stamp.className = "phase-stamp";
+    const title = root.createElement("span"); title.textContent = label(phase);
+    const state = root.createElement("small"); state.textContent = current === phase ? "当前" : "—";
+    if (current === phase) stamp.setAttribute("aria-current", "step");
+    stamp.title = current === phase ? `当前观测：${label(phase)}` : `${label(phase)}，不表示已发生或已完成`;
+    stamp.append(pixelIcon(root, iconIndex), title, state);
+    return stamp;
+  }));
+}
 
 export function desktopGuildModel(snapshot, selectedQuestId = null) {
   const active = new Set(snapshot.world.active_run_ids ?? []);
@@ -126,7 +174,12 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
     const button = element("button", `roster-run${run.questId === model.selectedId ? " is-current" : ""}`);
     button.type = "button"; button.dataset.selectQuest = run.questId; button.dataset.selectRun = run.id;
     button.setAttribute("aria-pressed", String(run.questId === model.selectedId));
-    const portrait = element("img", "roster-portrait"); portrait.src = "/assets/pixel/guild/archivist.png"; portrait.alt = "";
+    const portrait = element("span", "roster-portrait");
+    portrait.setAttribute("aria-hidden", "true");
+    let portraitIndex = 0;
+    for (const character of run.id) portraitIndex = (portraitIndex * 31 + character.charCodeAt(0)) >>> 0;
+    portrait.dataset.portrait = String(portraitIndex % 4);
+    button.title = `${run.title}\n${run.id}\n${run.relationship}\n${run.status}`;
     const copy = element("span", "roster-copy"); copy.append(element("strong", "", run.title),element("small", "run-id", run.id),element("small", "", run.relationship),element("small", "run-state", run.status));
     button.append(portrait, copy); return button;
   });
@@ -144,7 +197,7 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
     let button = [...domains.children].find(node => node.dataset.domain === domain.name);
     if (!button) {
       button = element("button", "domain-node"); button.type = "button"; button.dataset.domain = domain.name;
-      button.append(element("span", "domain-sigil", ["▤", "◇", "⌘", "⚒", "✦", "⚙"][index]), element("strong", "", label(domain.name)), element("small", "")); domains.append(button);
+      button.append(pixelIcon(root, index, "domain-sigil"), element("strong", "", label(domain.name)), element("small", "")); domains.append(button);
     }
     button.querySelector("small").textContent = `${domain.value} / 100`;
   });
@@ -153,7 +206,11 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
   model.artifacts.slice(0, 3).forEach((artifact, index) => {
     const id = JSON.stringify([artifact.source_quest_id, artifact.artifact_id]);
     let button = [...artifacts.children].find(node => node.dataset.artifactId === id);
-    if (!button) { button = element("button", "artifact-slot"); button.type = "button"; button.dataset.artifactId = id; button.append(element("span", "artifact-symbol", "▣"),element("strong", ""),element("small", "")); }
+    if (!button) {
+      const iconIndex = { code: 2, document: 0, research: 0, plan: 1, creative: 4, validation: 3, automation: 5 }[artifact.kind] ?? 0;
+      button = element("button", "artifact-slot"); button.type = "button"; button.dataset.artifactId = id;
+      button.append(pixelIcon(root, iconIndex, "artifact-symbol"),element("strong", ""),element("small", ""));
+    }
     button.querySelector("strong").textContent = artifact.name;
     button.querySelector("small").textContent = label(artifact.kind);
     retained.add(button);

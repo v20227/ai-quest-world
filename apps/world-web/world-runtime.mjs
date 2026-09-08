@@ -4,6 +4,8 @@ import { SqliteEventStore } from "../../storage/sqlite/index.mjs";
 import { SqliteProjectionStore } from "../../storage/sqlite/projection-store.mjs";
 import { projectWorld, PROJECTION_POLICY_VERSION } from "./project-world.mjs";
 import { worldAtTime } from "../../core/world/world-view.mjs";
+import { createHash, randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
 
 /**
  * Local projection runtime for the Web app. It owns orchestration only: the
@@ -16,6 +18,7 @@ export class PersistentWorldRuntime {
   #memory;
   #observer;
   #closed = false;
+  #displayNamespace;
 
   /** @param {{path?: string}=} options */
   constructor({ path = "storage/sqlite/ai-quest-world.sqlite" } = {}) {
@@ -24,6 +27,7 @@ export class PersistentWorldRuntime {
     }
 
     this.#eventStore = new SqliteEventStore({ path });
+    this.#displayNamespace = path === ":memory:" ? randomUUID() : createHash("sha256").update(realpathSync(path)).digest("hex");
     this.#memory = path === ":memory:";
     try {
       this.#projectionStore = new SqliteProjectionStore({ path });
@@ -107,6 +111,11 @@ export class PersistentWorldRuntime {
       progression_count: snapshot.progressions.length,
       applied_input_count: this.#projectionStore.countApplied()
     };
+  }
+
+  getDisplayNamespace() {
+    this.#assertOpen();
+    return this.#displayNamespace;
   }
 
   /** Close all local repositories. Calling close more than once is safe. */

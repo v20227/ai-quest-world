@@ -72,7 +72,14 @@ test("root serves raster guild assets and a separate display-only scene module",
   const html = await (await fetch(origin)).text();
   assert.match(html, /hall-environment/);
   assert.doesNotMatch(html, /<svg|pixel-building|library-sprite|mountain-front/);
-  for (const path of ["/guild-scene.mjs", "/assets/pixel/guild/hall-interior.png", "/assets/pixel/guild/archivist.png"]) {
+  for (const path of [
+    "/guild-scene.mjs", "/guild-desktop.css", "/pixel-composition.mjs", "/scene-assets.mjs",
+    "/workshop-display.mjs", "/asset-preview.mjs", "/character-preferences.mjs",
+    "/scene-motion.mjs", "/scene-frames.mjs", "/scene-objects.mjs",
+    "/assets/pixel/guild/hall-interior.png", "/assets/pixel/guild/archivist.png",
+    "/assets/pixel/guild/guild-room.png", "/assets/pixel/guild/world-atlas.png",
+    "/assets/pixel/guild/portraits.png", "/assets/pixel/guild/domain-icons.png"
+  ]) {
     const response = await fetch(origin + path);
     assert.equal(response.status, 200, path);
   }

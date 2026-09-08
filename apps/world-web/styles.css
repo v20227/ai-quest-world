@@ -9,6 +9,35 @@ body[data-theme] {
 }
 body[data-theme="meadow"] { --panel: #183031; --panel-hi: #294442; --gold: #d8bc85; --paper: #e2d9b6; --paper-hi: #f1ebd2; --paper-shade: #bdad80; }
 * { box-sizing:border-box; }
+.asset-preview { margin:16px 5%; padding:18px; }
+.asset-preview summary { cursor:pointer; color:var(--gold); }
+.asset-preview-content { display:grid; grid-template-columns:minmax(140px,1fr) minmax(200px,2fr); gap:16px; padding-top:16px; }
+.asset-preview-content > h3,.asset-preview-content > p,.asset-preview-catalog { grid-column:1/-1; }
+.asset-preview-character { position:relative; min-height:220px; background:var(--panel-hi); border:1px solid var(--wood); }
+.asset-preview-character img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
+.asset-slot-controls { display:grid; gap:10px; }
+.asset-slot-label { display:grid; grid-template-columns:80px minmax(0,1fr); gap:12px; align-items:center; }
+.asset-preview-catalog { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+.asset-preview-card { min-width:0; padding:12px; border:1px solid var(--wood); overflow-wrap:anywhere; }
+.asset-preview-card img { width:100%; height:150px; object-fit:contain; image-rendering:pixelated; }
+@media(max-width:600px) { .asset-preview-content { grid-template-columns:minmax(0,1fr); } }
+.scene-object-control { position:absolute; transform:translate(-50%,-50%); max-width:180px; padding:8px 12px; background:var(--panel); border:2px solid var(--wood); color:var(--text); }
+.scene-object-control:hover { border-color:var(--gold); }
+.scene-object-image { display:block; max-width:100%; image-rendering:pixelated; pointer-events:none; }
+.scene-object-control[data-has-asset] { transform:translate(var(--object-anchor-x,-50%),var(--object-anchor-y,-50%)); padding:0; background:transparent; border-color:transparent; max-width:240px; width:19%; }
+.scene-object-control[data-has-asset] > span { display:block; padding:4px 8px; background:var(--panel); border:1px solid var(--wood); font-size:12px; }
+.scene-object-control[data-has-asset]:hover .scene-object-image { filter:drop-shadow(0 0 3px var(--gold)); }
+.archivist[data-motion-state] { animation:none; }
+.archivist[data-layers] img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+.workshop-display { margin:16px 5%; padding:18px; display:grid; grid-template-columns:minmax(160px,1fr) minmax(200px,2fr); gap:12px 24px; }
+.workshop-display h3,.workshop-display .display-status,.workshop-display .artifact-meta { grid-column:1/-1; }
+.display-selected { min-height:72px; padding:12px; background:var(--panel-hi); border:2px solid var(--wood); overflow-wrap:anywhere; }
+.display-picker { min-width:0; width:100%; color:var(--text); background:var(--panel); border:1px solid var(--wood); padding:10px; font:inherit; }
+.display-actions { grid-column:1/-1; display:flex; gap:18px; flex-wrap:wrap; }
+.workshop-display[data-activity="active"] .display-selected { border-color:var(--cyan); }
+.archivist[data-activity="active"] { filter:drop-shadow(0 0 5px var(--cyan)); }
+.archivist[data-asset-error="true"]::after { content:"角色素材暂不可用"; font-size:12px; }
+@media(max-width:600px) { .workshop-display { grid-template-columns:minmax(0,1fr); }.display-picker { grid-column:1; } }
 body { margin:0; background:var(--night); color:var(--text); font:14px/1.5 system-ui,-apple-system,"PingFang SC",sans-serif; }
 h1,h2,h3,p { margin:0; }
 button { font:inherit; color:inherit; cursor:pointer; border-radius:0; }
