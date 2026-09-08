@@ -4,6 +4,8 @@ import {
 } from "../semantic/semantic-types.mjs";
 import { validateProgressionSnapshot } from "../game/progression-types.mjs";
 import {
+  ACTIVITY_HALF_LIFE_MS,
+  WORLD_MILESTONE_IDS,
   createInitialWorldState,
   validateWorldState
 } from "./world-state-types.mjs";
@@ -99,6 +101,30 @@ export class WorldStateEngine {
   }
 
   /**
+   * Decay temporary activity to a supplied deterministic timestamp. Permanent
+   * progression and unlocks are untouched.
+   *
+   * @param {string} timestamp
+   * @returns {Record<string, unknown>|null}
+   */
+  advanceTo(timestamp) {
+    assertTimestamp(timestamp, "timestamp");
+    const inputId = `decay:${timestamp}`;
+    if (this.#isApplied(inputId)) {
+      return null;
+    }
+
+    const nextState = decayWorldActivity(this.#state, timestamp);
+    const result = this.#commit(inputId, "activity_decay", nextState);
+    this.#state = validateWorldState(result.state);
+    if (!result.applied) {
+      return null;
+    }
+    this.#appliedInputIds.add(inputId);
+    return this.getState();
+  }
+
+  /**
    * Reset an in-memory projection. Durable repositories are intentionally
    * never cleared by this method.
    */
@@ -135,7 +161,7 @@ export class WorldStateEngineError extends Error {
 
 function applyRuntimeEvent(state, event) {
   const next = cloneJson(state);
-  next.updated_at = event.timestamp;
+  next.updated_at = maxTimestamp(next.updated_at, event.timestamp);
 
   if (event.type === "run.started") {
     addUnique(next.active_run_ids, event.context.run_id);
@@ -143,6 +169,7 @@ function applyRuntimeEvent(state, event) {
     next.gate.first_connected_at ??= event.timestamp;
     next.gate.state = "ACTIVE";
     next.gate.last_event_at = event.timestamp;
+    setActivity(next.activity.gate, 100, event.timestamp);
   } else if (TERMINAL_EVENT_TYPES.has(event.type)) {
     removeValue(next.active_run_ids, event.context.run_id);
     next.gate.last_event_at = event.timestamp;
@@ -150,6 +177,7 @@ function applyRuntimeEvent(state, event) {
       ? "ACTIVE"
       : next.gate.first_connected_at === null ? "DORMANT" : "RETURNING";
     next.last_return_at = event.timestamp;
+    setActivity(next.activity.gate, 60, event.timestamp);
   }
 
   return validateWorldState(next);
@@ -178,6 +206,9 @@ function applyProgression(state, progression) {
   if (qualifyingCompletion) {
     next.progression_totals.qualifying_quest_count += 1;
     next.guild.qualifying_quest_count += 1;
+    if (addMilestone(next, "first_qualifying_completion", timestamp, quest.quest_id)) {
+      changes.push(createHighlight("milestone_unlocked", "first_qualifying_completion", "First qualifying Quest", 5, quest.quest_id));
+    }
     if (next.guild.state === "OLD") {
       next.guild.state = "RESTORED";
       next.guild.restored_at = timestamp;
@@ -187,6 +218,7 @@ function applyProgression(state, progression) {
 
   if (credible && hasDomainProgress(progression, WORKSHOP_DOMAINS)) {
     addBuildingProgress(next.workshop, progression.domain_progress, WORKSHOP_DOMAINS);
+    setActivity(next.activity.workshop, 85, timestamp);
     if (next.workshop.state === "LOCKED") {
       next.workshop.state = "IDLE";
       next.workshop.unlocked_at = timestamp;
@@ -196,6 +228,7 @@ function applyProgression(state, progression) {
 
   if (credible && hasDomainProgress(progression, LIBRARY_DOMAINS)) {
     addBuildingProgress(next.library, progression.domain_progress, LIBRARY_DOMAINS);
+    setActivity(next.activity.library, 85, timestamp);
     if (next.library.state === "LOCKED") {
       next.library.state = "IDLE";
       next.library.unlocked_at = timestamp;
@@ -205,6 +238,9 @@ function applyProgression(state, progression) {
 
   if (progression.loot_refs.length > 0) {
     const firstLoot = progression.loot_refs[0];
+    if (addMilestone(next, "first_artifact", timestamp, quest.quest_id)) {
+      changes.push(createHighlight("milestone_unlocked", "first_artifact", "First real artifact", 5, quest.quest_id));
+    }
     changes.push(createHighlight(
       "artifact_received",
       "artifact",
@@ -212,6 +248,10 @@ function applyProgression(state, progression) {
       4,
       quest.quest_id
     ));
+  }
+
+  if (progression.outcome_confidence === "VERIFIED" && addMilestone(next, "first_verified_outcome", timestamp, quest.quest_id)) {
+    changes.push(createHighlight("milestone_unlocked", "first_verified_outcome", "First Verified outcome", 5, quest.quest_id));
   }
 
   if (quest.status === "COMPLETED") {
@@ -241,6 +281,54 @@ function hasDomainProgress(progression, domains) {
   return domains.some((domain) => progression.domain_progress[domain] > 0);
 }
 
+function addMilestone(state, milestoneId, timestamp, questId) {
+  if (!WORLD_MILESTONE_IDS.includes(milestoneId) || state.milestones.some((milestone) => milestone.milestone_id === milestoneId)) {
+    return false;
+  }
+  state.milestones.push({
+    milestone_id: milestoneId,
+    unlocked_at: timestamp,
+    quest_id: questId
+  });
+  return true;
+}
+
+function decayWorldActivity(state, timestamp) {
+  const next = cloneJson(state);
+  for (const building of ["gate", "workshop", "library"]) {
+    decayActivity(next.activity[building], timestamp);
+  }
+  next.updated_at = maxTimestamp(next.updated_at, timestamp);
+  return validateWorldState(next);
+}
+
+function decayActivity(activity, timestamp) {
+  if (activity.last_at === null) {
+    return;
+  }
+  const elapsed = Date.parse(timestamp) - Date.parse(activity.last_at);
+  if (elapsed <= 0) {
+    return;
+  }
+  activity.level = Math.max(
+    0,
+    Math.round(activity.level * (2 ** (-elapsed / ACTIVITY_HALF_LIFE_MS)))
+  );
+  activity.last_at = timestamp;
+}
+
+function setActivity(activity, level, timestamp) {
+  if (activity.last_at !== null && Date.parse(timestamp) < Date.parse(activity.last_at)) {
+    return;
+  }
+  activity.level = level;
+  activity.last_at = timestamp;
+}
+
+function maxTimestamp(left, right) {
+  return Date.parse(left) >= Date.parse(right) ? left : right;
+}
+
 function createHighlight(kind, target, label, priority, questId) {
   return {
     kind,
@@ -266,4 +354,10 @@ function removeValue(values, value) {
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function assertTimestamp(value, name) {
+  if (typeof value !== "string" || value.trim().length === 0 || Number.isNaN(Date.parse(value))) {
+    throw new TypeError(`${name} must be a valid ISO-8601 timestamp`);
+  }
 }
