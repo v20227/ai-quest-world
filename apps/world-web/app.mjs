@@ -65,14 +65,14 @@ function bindEvents() {
 
     const modeTrigger = event.target.closest("[data-demo-mode]");
     if (modeTrigger !== null) {
-      ui.source = "demo";
+      setSource("demo");
       loadSnapshot(modeTrigger.dataset.demoMode);
       return;
     }
 
     const sourceTrigger = event.target.closest("[data-source]");
     if (sourceTrigger !== null) {
-      ui.source = sourceTrigger.dataset.source;
+      setSource(sourceTrigger.dataset.source);
       loadSnapshot(ui.mode, { showReturn: ui.source === "demo" });
       return;
     }
@@ -559,4 +559,15 @@ function showToast(message) {
 
 function initialSource() {
   return new URLSearchParams(window.location.search).get("source") === "demo" ? "demo" : "live";
+}
+
+function setSource(source) {
+  ui.source = source === "demo" ? "demo" : "live";
+  const url = new URL(window.location.href);
+  if (ui.source === "demo") {
+    url.searchParams.set("source", "demo");
+  } else {
+    url.searchParams.delete("source");
+  }
+  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
