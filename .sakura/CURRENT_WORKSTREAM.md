@@ -1,18 +1,19 @@
-# Current Workstream: Local Persistence — Normalized Event Storage
+# Current Workstream: Deterministic Semantic Engine
 
 ## Outcome
 
-Persist validated normalized UARP v0.1 event envelopes in a versioned local SQLite store with stable ordering, replay queries, and restart-safe event identity. Keep the Phase 1 public boundaries unchanged and do not start Semantic Engine, Game Core, or UI work in this slice.
+Turn ordered, validated UARP facts into deterministic semantic records and a six-domain Activity Mix. The engine owns interpretation only: it must not mutate Quest, reward, growth, artifact, World State, renderer, or Harness state.
 
 ## Acceptance
 
-- B1: Opening a new database applies a versioned schema migration and supports an in-memory test database.
-- B2: Appending an event validates it through the UARP boundary before writing and stores the complete factual envelope.
-- B3: Repeating an event ID is a no-op in one process and after closing/reopening the database.
-- B4: Replay queries preserve insertion order and factual fields, including parent/child context, evidence references, and privacy metadata.
-- B5: Invalid events are rejected without a row; an invalid item in a batch does not leave partial writes.
-- B6: The existing Phase 1 suite and the new persistence suite pass together with no external AI/API.
-- B7: This slice adds no Semantic Engine, Quest, reward, world-state, renderer, or Game → Harness control.
+- C1: The engine emits a stable semantic timeline for the canonical simulated run: `DEPART → EXPLORE → ACT → VALIDATE → RECOVER → VALIDATE → DELIVER → RETURN`.
+- C2: The engine recognizes exploration, implementation, validation failure/success, recovery, delivery, and return from factual event types and attributes.
+- C3: Six domains are represented: Research, Planning, Engineering, Debugging, Creation, and Automation.
+- C4: Activity Mix uses deterministic semantic impact weights and does not let raw resource/token/tool counts dominate meaningful changes.
+- C5: Parent/child run context contributes to one root semantic timeline while preserving source run and agent identity.
+- C6: Replaying the same `event_id` is idempotent and does not duplicate semantic records or domain scores.
+- C7: Semantic records are deterministic, contain no reward/game-state mutations, and can be consumed without a concrete adapter or UI.
+- C8: Phase 1 and G2 persistence tests remain green without an external AI/API.
 
 ## Work items
 
@@ -27,25 +28,22 @@ Persist validated normalized UARP v0.1 event envelopes in a versioned local SQLi
 | PERSIST-01 | Versioned SQLite schema and normalized event store | `storage/sqlite` | PHASE1-INT-01 | B1-B4 | Complete |
 | PERSIST-02 | Restart, idempotency, validation, atomic batch, and replay tests | `tests/ai-quest-world/persistence.test.mjs` | PERSIST-01 contract | B2-B6 | Complete |
 | PERSIST-INT-01 | Main-branch integration and scope review | Repository | PERSIST-01, PERSIST-02 | B1-B7 | Complete |
+| SEMANTIC-01 | Semantic types, phase state machine, domain weights, and deterministic engine | `core/semantic` | PERSIST-INT-01 | C1-C7 | In progress |
+| SEMANTIC-02 | Canonical semantic timeline, Activity Mix, hierarchy, and replay tests | `tests/ai-quest-world/semantic.test.mjs` | SEMANTIC-01 contract | C1-C8 | In progress |
+| SEMANTIC-INT-01 | Main-branch integration and scope review | Repository | SEMANTIC-01, SEMANTIC-02 | C1-C8 | Planned |
 
 ## Repair history
 
-- Added full-envelope game-semantic rejection, JSON-safe value checks, and private SQLite handle encapsulation after batch review.
+- G2 batch review repaired full-envelope game-semantic rejection, JSON-safe value checks, and private SQLite handle encapsulation.
 
 ## Acceptance result
 
-- B1 PASS: schema version 1 migrates on file and in-memory databases.
-- B2 PASS: UARP validation runs before persistence and complete factual envelopes round-trip.
-- B3 PASS: duplicate event IDs remain no-ops in-process and after restart.
-- B4 PASS: insertion order, run filtering, context, evidence, and privacy metadata survive replay.
-- B5 PASS: malformed events are rejected and invalid batches leave no partial writes.
-- B6 PASS: combined Phase 1 and persistence suites pass 17/17 without an external AI/API.
-- B7 PASS: no Semantic Engine, Quest, reward, world-state, renderer, or Game → Harness control was added.
+G0-G2 remain green. G3 semantic acceptance is pending C1-C8.
 
 ## Completion decision
 
-Milestone 2 normalized event storage is green and ready for the next milestone.
+G3 is complete only after the semantic fixture, replay/idempotency checks, Activity Mix checks, and the full regression suite pass together.
 
 ## Exact next action
 
-Start Milestone 3 planning with a deterministic semantic-event contract that reads UARP facts and cannot mutate Game/World State.
+Integrate the two bounded semantic changes, run the full test batch, and review that no Game Core or World State mutation has entered the semantic layer.

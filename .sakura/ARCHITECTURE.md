@@ -32,6 +32,20 @@ tests/ai-quest-world/
 - `event-store.mjs` owns validated append, idempotent event identity, replay ordering, filtering, and local database lifecycle.
 - The event store persists the complete UARP envelope while exposing no raw SQLite handle.
 
+## Milestone 3 module map
+
+```text
+core/semantic/
+  semantic-types.mjs
+  semantic-engine.mjs
+tests/ai-quest-world/
+  semantic.test.mjs
+```
+
+- `semantic-types.mjs` owns the semantic phase/domain vocabulary and record shape.
+- `semantic-engine.mjs` consumes validated UARP facts, maintains only interpretation state, and emits deterministic semantic records/snapshots.
+- Semantic Engine state is not authoritative game state and has no dependency on SQLite, Game Core, UI, or a concrete Harness Adapter.
+
 ## Ownership
 
 - `packages/uarp` owns factual event envelopes, canonical event types, capabilities, evidence references, privacy metadata, and runtime validation.
