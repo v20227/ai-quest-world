@@ -34,6 +34,17 @@ git push -u origin HEAD
 
 Use a focused commit. Do not commit `.env`, credentials, private keys, local databases, build output, or generated caches.
 
+## Batch development cadence
+
+The delivery unit is a complete outcome or bounded milestone slice, not an individual file.
+
+- The integration owner defines the outcome, exclusive write scopes, and acceptance checks before dispatching work.
+- Worker contexts may implement independent scopes and run fast syntax or focused smoke checks while developing.
+- Do not pause the whole workstream for a full test suite or review after every small edit.
+- When a coherent batch is ready, the integration owner runs the full suite, diff check, scope review, and one focused architectural review.
+- The integration owner owns commits, branch synchronization, merges, and pushes to `main`.
+- Support contexts do not use credentials or perform GitHub writes; their changes are integrated only after the batch gate passes.
+
 ## Merge flow
 
 1. Push the session branch to GitHub.

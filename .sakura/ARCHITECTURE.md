@@ -18,6 +18,20 @@ tests/ai-quest-world/
   phase1.test.mjs
 ```
 
+## Milestone 2 module map
+
+```text
+storage/sqlite/
+  schema.mjs
+  event-store.mjs
+tests/ai-quest-world/
+  persistence.test.mjs
+```
+
+- `schema.mjs` owns the versioned SQLite migration and event indexes.
+- `event-store.mjs` owns validated append, idempotent event identity, replay ordering, filtering, and local database lifecycle.
+- The event store persists the complete UARP envelope while exposing no raw SQLite handle.
+
 ## Ownership
 
 - `packages/uarp` owns factual event envelopes, canonical event types, capabilities, evidence references, privacy metadata, and runtime validation.

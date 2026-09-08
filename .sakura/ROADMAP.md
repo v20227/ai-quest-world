@@ -1,5 +1,21 @@
 # Roadmap
 
+## Confirmed delivery goal
+
+Build AI Quest World v0.1 as a local-first, read-only, offline-capable observability game layer: a meaningful real Agent Harness run becomes factual runtime events, deterministic work semantics, Quest and evidence-based growth, and a persistent Web pixel world without requiring an additional AI API.
+
+## Delivery targets
+
+- G0: Repository and GitHub collaboration baseline — complete.
+- G1: UARP, Adapter Core, simulated Harness, and Observer foundation — complete.
+- G2: Local SQLite event persistence and restart-safe replay — complete.
+- G3: Deterministic Semantic Engine and work-phase state machine — next.
+- G4: Quest lifecycle, outcome/evidence policy, growth, anti-abuse, and artifact references.
+- G5: Persistent World State and building progression.
+- G6: Web pixel world and return/unlock presentation.
+- G7: First real Harness Adapter behind the existing adapter boundary.
+- G8: End-to-end v0.1 acceptance.
+
 ## Milestone 0: Repository baseline
 
 - Project contract and scaffold merged at the repository root.
@@ -16,15 +32,17 @@
 
 Exit evidence: `npm test` passes all 8 Phase 1 tests, and every required event reaches the downstream sink as valid, deduplicated UARP data.
 
-## Milestone 2: Local persistence — in progress
+## Milestone 2: Local persistence — complete
 
-Current slice: normalized UARP event storage only.
+Completed slice: normalized UARP event storage only.
 
 1. Persist validated event envelopes in local SQLite with a versioned schema.
 2. Preserve stable insertion order, run/agent context, evidence, and privacy metadata.
 3. Make duplicate event IDs idempotent across restart and expose read-only replay queries.
 
-Deferred until this slice is green: semantic, Quest, artifact, world, and settings repositories.
+Exit evidence: versioned SQLite event storage, full-envelope replay, restart-safe event identity, atomic batch validation, and 17/17 combined tests.
+
+Deferred to later milestones: semantic, Quest, artifact, world, and settings repositories.
 
 ## Milestone 3: Semantics and game core
 

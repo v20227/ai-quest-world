@@ -24,22 +24,28 @@ Persist validated normalized UARP v0.1 event envelopes in a versioned local SQLi
 | SIM-01 | Deterministic simulated Adapter fixture | `adapters/first-harness` | ADAPTER-01 | A3, A6, A7 | Complete |
 | OBS-01 | Ingestion, dedupe, buffering, aggregation, and redaction hooks | `observer` | UARP-01, ADAPTER-01 | A4, A5, A7 | Complete |
 | PHASE1-INT-01 | Integrated simulated stream and regression tests | `tests/ai-quest-world` | SIM-01, OBS-01 | A1-A8 | Complete |
-| PERSIST-01 | Versioned SQLite schema and normalized event store | `storage/sqlite` | PHASE1-INT-01 | B1-B4 | In progress |
-| PERSIST-02 | Restart, idempotency, validation, atomic batch, and replay tests | `tests/ai-quest-world/persistence.test.mjs` | PERSIST-01 contract | B2-B6 | In progress |
-| PERSIST-INT-01 | Main-branch integration and scope review | Repository | PERSIST-01, PERSIST-02 | B1-B7 | Planned |
+| PERSIST-01 | Versioned SQLite schema and normalized event store | `storage/sqlite` | PHASE1-INT-01 | B1-B4 | Complete |
+| PERSIST-02 | Restart, idempotency, validation, atomic batch, and replay tests | `tests/ai-quest-world/persistence.test.mjs` | PERSIST-01 contract | B2-B6 | Complete |
+| PERSIST-INT-01 | Main-branch integration and scope review | Repository | PERSIST-01, PERSIST-02 | B1-B7 | Complete |
 
 ## Repair history
 
-No persistence repair has been recorded.
+- Added full-envelope game-semantic rejection, JSON-safe value checks, and private SQLite handle encapsulation after batch review.
 
 ## Acceptance result
 
-Phase 1 remains green. Milestone 2 persistence acceptance is pending B1-B7.
+- B1 PASS: schema version 1 migrates on file and in-memory databases.
+- B2 PASS: UARP validation runs before persistence and complete factual envelopes round-trip.
+- B3 PASS: duplicate event IDs remain no-ops in-process and after restart.
+- B4 PASS: insertion order, run filtering, context, evidence, and privacy metadata survive replay.
+- B5 PASS: malformed events are rejected and invalid batches leave no partial writes.
+- B6 PASS: combined Phase 1 and persistence suites pass 17/17 without an external AI/API.
+- B7 PASS: no Semantic Engine, Quest, reward, world-state, renderer, or Game → Harness control was added.
 
 ## Completion decision
 
-The normalized event storage slice is complete only after the implementation and test worker changes are reviewed together and the full suite passes.
+Milestone 2 normalized event storage is green and ready for the next milestone.
 
 ## Exact next action
 
-Wait for the two bounded workers, inspect their file lists and tests, then integrate only the agreed persistence slice on `main`.
+Start Milestone 3 planning with a deterministic semantic-event contract that reads UARP facts and cannot mutate Game/World State.

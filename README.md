@@ -87,13 +87,15 @@ Then paste the contents of `CODEX_START_PROMPT.md` into Codex. Codex should impl
 
 Do not paste the entire design discussion into every Codex turn; the repository documents are the source of truth.
 
-## Phase 1 verification
+## Local verification
 
-The current foundation has no third-party dependencies. Run:
+The local runtime uses Node's built-in SQLite and test runner; no third-party dependency or external AI API is required. Use Node 22.13.0 or newer, then run:
 
 ```sh
 npm test
 ```
+
+The test command covers the Phase 1 protocol/adapter/observer suite and the Milestone 2 normalized event persistence suite.
 
 ## Before implementation
 

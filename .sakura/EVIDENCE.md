@@ -3,8 +3,8 @@
 ## Repository baseline
 
 - The supplied development pack passed SHA-256 verification and `unzip -t` integrity checks before extraction.
-- The project root is a Git repository on `main` with no commits and no configured remote before implementation.
-- Node 24.12.0 and npm 11.6.2 are available for the dependency-free Phase 1 test runner.
+- The project root is a Git repository on `main` with the GitHub remote `https://github.com/v20227/ai-quest-world.git`.
+- Node 24.12.0 and npm 11.6.2 are available; the local runtime uses built-in `node:sqlite` and the Node test runner.
 
 ## Phase 1
 
@@ -16,7 +16,17 @@
 - Resource aggregation combined only `resource.activity` events and preserved validation/artifact events and their relative order.
 - The validator rejected missing IDs, unsupported protocol versions, and game-semantic attribute keys.
 
+## Milestone 2 normalized event persistence
+
+- `node --check` passed for the SQLite schema and event-store modules.
+- The persistence suite passed: 9/9 tests, 0 failures.
+- The combined Phase 1 and persistence suites passed: 15/15 tests, 0 failures.
+- File-backed SQLite restart preserved event identity, full UARP envelope, parent/child context, evidence references, and privacy metadata.
+- Duplicate event IDs remained idempotent in one process and after reopening the database.
+- Invalid single events were rejected without rows, and invalid batches rolled back without partial writes.
+- Schema version 1 and the event identity/run/replay indexes were verified.
+- Batch review repairs now reject game-semantic keys across the complete UARP envelope, reject JSON values that would be silently changed, and keep the raw SQLite handle private.
+
 ## Remaining verification
 
-- GitHub remote setup and push are pending a repository URL or an explicit repository-creation request.
-- SQLite, Semantic Engine, Game Core, Web World, and real Harness integration are intentionally not implemented in Phase 1.
+- Semantic Engine, Game Core, Web World, and real Harness integration are intentionally not implemented in this slice.

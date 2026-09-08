@@ -77,6 +77,11 @@ test("UARP validates capabilities and keeps game semantics out of attributes", (
     () => validateRuntimeEvent({ ...event, attributes: { xp: 10 } }),
     /game semantics are not allowed/
   );
+
+  assert.throws(
+    () => validateRuntimeEvent({ ...event, reward: { xp: 10 } }),
+    /event\.reward.*game semantics are not allowed/
+  );
 });
 
 test("Adapter Core exposes valid contracts and simulated lifecycle is safe", async () => {
