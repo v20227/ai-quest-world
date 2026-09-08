@@ -69,6 +69,24 @@ tests/ai-quest-world/
 - `progression-policy.mjs` calculates bounded Skill XP, Domain Progress, and artifact rewards from semantic records and Quest evidence; it has no token/tool/file/agent-volume reward path and no World State dependency.
 - Activity Mix projections clamp rounded percentages against the remaining 100-point budget so every domain remains within the valid range.
 
+## World State module map
+
+```text
+core/world/
+  index.mjs
+  world-state-types.mjs
+  world-state-engine.mjs
+storage/sqlite/
+  schema.mjs
+  world-state-store.mjs
+tests/ai-quest-world/
+  world-state.test.mjs
+```
+
+- `world-state-types.mjs` owns the Small Camp baseline, building states, cumulative totals, active runs, and the three-highlight return budget.
+- `world-state-engine.mjs` is the authoritative deterministic projector: runtime lifecycle events control temporary Gate activity, while resolved progression controls permanent unlocks and totals.
+- `world-state-store.mjs` atomically persists one validated World State row and applied-input markers in the shared SQLite schema; duplicate events and Quest progressions are no-ops after restart.
+
 ## Ownership
 
 - `packages/uarp` owns factual event envelopes, canonical event types, capabilities, evidence references, privacy metadata, and runtime validation.

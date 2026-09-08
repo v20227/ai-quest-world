@@ -2,7 +2,7 @@
  * @typedef {import("node:sqlite").DatabaseSync} DatabaseSync
  */
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 /** @type {ReadonlyMap<number, (database: DatabaseSync) => void>} */
 const MIGRATIONS = new Map([
@@ -28,6 +28,22 @@ const MIGRATIONS = new Map([
 
       CREATE INDEX IF NOT EXISTS idx_runtime_events_sequence
         ON runtime_events (sequence);
+    `);
+  }],
+  [2, (database) => {
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS world_state (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        state_json TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS world_applied_inputs (
+        input_id TEXT PRIMARY KEY,
+        input_kind TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_world_applied_inputs_kind
+        ON world_applied_inputs (input_kind);
     `);
   }]
 ]);

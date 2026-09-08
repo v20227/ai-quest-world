@@ -1,19 +1,19 @@
-# Current Workstream: Evidence-Bounded Progression and Anti-Abuse
+# Current Workstream: Persistent World State Boundary
 
 ## Outcome
 
-Turn a completed Quest plus deterministic semantic records into bounded Skill XP, Domain Progress, and real artifact rewards. Replays, high-volume facts, repeated failures, child runs, and retries must not multiply progression, and this slice must not mutate World State.
+Turn normalized runtime events and resolved progression into one restart-safe World State projection. The Game Core remains the only writer of building, unlock, activity, and cumulative progression state; the Web layer will consume this state later.
 
 ## Acceptance
 
-- E1: Only terminal Quest outcomes produce progression; active and validating Quests remain pending.
-- E2: Verified, Supported, Unverified, Failed, and Cancelled outcomes use deterministic bounded multipliers; failures may receive limited process credit but never full completion credit.
-- E3: Skill XP is based on fixed semantic transition weights and outcome evidence, not token usage, tool-call count, file-read/search count, or agent count.
-- E4: Repeated semantic kinds use diminishing credit and per-kind caps; twenty identical validation failures cannot produce twenty times the first failure credit.
-- E5: Domain Progress is bounded per Quest and follows semantic domain contributions plus outcome confidence.
-- E6: A real artifact reward requires `durable=true` and a URI/path or evidence reference; failed/cancelled/unverified outcomes do not fabricate artifact rewards.
-- E7: Duplicate semantic IDs/source event IDs are idempotent, child/retry records remain within the root Quest, and the output is deterministic.
-- E8: Phase 1, persistence, semantic, and Quest tests remain green without an external AI/API.
+- W1: A fresh World State starts with Small Camp active, AI Gate dormant, Quest Guild old, and Workshop/Library locked.
+- W2: Root run start activates the Gate and records active runs; terminal events remove runs and produce a Returning Gate state.
+- W3: A credible completed Quest restores the Guild once, unlocks Workshop for Engineering/Debugging/Automation progress, and unlocks Library for Research/Planning progress.
+- W4: Skill XP, Domain Progress, qualifying Quest count, and real artifact count accumulate exactly once per Quest progression.
+- W5: Unverified, Failed, and Cancelled outcomes do not unlock buildings or fabricate artifacts; limited progression already calculated by G4 may still be recorded.
+- W6: Duplicate runtime event IDs and duplicate resolved Quest progressions are idempotent in memory and after SQLite restart.
+- W7: World State has a versioned schema, validates all building states, and exposes at most three deterministic return highlights.
+- W8: Phase 1, persistence, semantic, Quest, and progression tests remain green without an external AI/API.
 
 ## Work items
 
@@ -37,6 +37,9 @@ Turn a completed Quest plus deterministic semantic records into bounded Skill XP
 | PROGRESSION-01 | Evidence-bounded Skill XP, Domain Progress, and artifact reward policy | `core/game` | QUEST-INT-01 | E1-E6 | Complete |
 | ANTIABUSE-01 | Replay protection, diminishing credits, and reward caps | `core/game` | PROGRESSION-01 | E3-E7 | Complete |
 | PROGRESSION-INT-01 | Main-branch integration and scope review | Repository | PROGRESSION-01, ANTIABUSE-01 | E1-E8 | Complete |
+| WORLD-01 | Versioned World State model and deterministic event/progression projection | `core/world` | PROGRESSION-INT-01 | W1-W5, W7 | Complete |
+| WORLD-PERSIST-01 | SQLite World State row and applied-input idempotency store | `storage/sqlite` | WORLD-01 | W6-W7 | Complete |
+| WORLD-INT-01 | Main-branch integration and restart/scope review | Repository | WORLD-01, WORLD-PERSIST-01 | W1-W8 | Complete |
 
 ## Repair history
 
@@ -44,12 +47,12 @@ Turn a completed Quest plus deterministic semantic records into bounded Skill XP
 
 ## Acceptance result
 
-G0-G4 and D1-D9 remain green. E1-E8 pass for the progression/anti-abuse slice.
+G0-G5 foundation and E1-E8 remain green. W1-W8 pass for the persistent World State slice.
 
 ## Completion decision
 
-The progression/anti-abuse slice is complete: deterministic snapshots, duplicate replay, high-volume, repeated-failure, child/retry, and artifact-evidence fixtures pass together without World State mutation.
+The persistent World State foundation slice is complete: fresh-state, active/returning Gate, credible unlock, negative-evidence, duplicate replay, SQLite restart, and highlight-budget fixtures pass together.
 
 ## Exact next action
 
-Define the smallest persistent World State repository and projection slice that consumes completed Quest progression without changing reward authority.
+Define the next G5 batch for temporary activity decay, milestone hooks, and the smallest durable Quest/progression read model needed by the Web layer.

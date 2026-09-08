@@ -11,7 +11,7 @@ Build AI Quest World v0.1 as a local-first, read-only, offline-capable observabi
 - G2: Local SQLite event persistence and restart-safe replay — complete.
 - G3: Deterministic Semantic Engine and work-phase state machine — complete.
 - G4: Quest lifecycle, outcome/evidence policy, growth, anti-abuse, and artifact references — complete.
-- G5: Persistent World State and building progression.
+- G5: Persistent World State and building progression — in progress.
 - G6: Web pixel world and return/unlock presentation.
 - G7: First real Harness Adapter behind the existing adapter boundary.
 - G8: End-to-end v0.1 acceptance.
@@ -58,6 +58,10 @@ G3 exit evidence: canonical semantic timeline, bounded impact weights, six-domai
 G4 complete: Candidate Quest lifecycle, Run-to-Quest association, outcome/evidence classification, factual artifact references, evidence-bounded Skill XP and Domain Progress, real artifact rewards, replay protection, diminishing repeated-failure credit, and deterministic per-Quest caps. World State remains the next milestone.
 
 G4 exit evidence: the combined Phase 1, persistence, semantic, Quest, and progression suites pass 44/44; high-volume facts do not alter progression, repeated validation failures are capped, duplicate semantic records are idempotent, and failed/unverified outcomes do not fabricate artifact loot.
+
+G5 foundation slice complete: versioned World State baseline, Gate activity/return projection, credible Guild/Workshop/Library unlocks, cumulative progression/artifact totals, return highlight budget, and restart-safe applied-input idempotency. Temporary activity decay, milestone hooks, and durable Quest/progression read models remain in G5.
+
+G5 foundation exit evidence: the combined Phase 1, persistence, semantic, Quest, progression, and World State suites pass 51/51; the canonical simulated run survives SQLite restart with one applied progression, returning Gate state, restored Guild, relevant building unlocks, cumulative totals, and no duplicate replay effects.
 
 Quest/outcome foundation evidence: Quest lifecycle, child/retry association, independent-root separation, replay idempotency, validation/artifact confidence policy, and factual artifact-reference merging are covered by the Quest suite and remain included in the overall 44/44 regression suite.
 
