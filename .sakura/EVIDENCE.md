@@ -27,6 +27,16 @@
 - Schema version 1 and the event identity/run/replay indexes were verified.
 - Batch review repairs now reject game-semantic keys across the complete UARP envelope, reject JSON values that would be silently changed, and keep the raw SQLite handle private.
 
+## G3 deterministic semantic interpretation
+
+- The semantic suite passed: 9/9 tests, 0 failures.
+- The combined Phase 1, persistence, and semantic suites passed: 26/26 tests, 0 failures.
+- The canonical simulated run produced the stable eight-node phase timeline from DEPART through EXPLORE, ACT, VALIDATE, RECOVER, DELIVER, and RETURN.
+- Fixed semantic impact weights and repeated resource-activity suppression kept large raw counts from changing the interpretation or Activity Mix.
+- Parent/child run and agent context was preserved under one root semantic timeline.
+- Replaying an event ID did not duplicate semantic records or domain scores.
+- Semantic records remained free of reward, Quest, building, and World State mutation fields.
+
 ## Remaining verification
 
 - Semantic Engine, Game Core, Web World, and real Harness integration are intentionally not implemented in this slice.

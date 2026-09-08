@@ -9,7 +9,7 @@ Build AI Quest World v0.1 as a local-first, read-only, offline-capable observabi
 - G0: Repository and GitHub collaboration baseline — complete.
 - G1: UARP, Adapter Core, simulated Harness, and Observer foundation — complete.
 - G2: Local SQLite event persistence and restart-safe replay — complete.
-- G3: Deterministic Semantic Engine and work-phase state machine — in progress.
+- G3: Deterministic Semantic Engine and work-phase state machine — complete.
 - G4: Quest lifecycle, outcome/evidence policy, growth, anti-abuse, and artifact references.
 - G5: Persistent World State and building progression.
 - G6: Web pixel world and return/unlock presentation.
@@ -46,12 +46,14 @@ Deferred to later milestones: semantic, Quest, artifact, world, and settings rep
 
 ## Milestone 3: Semantics and game core
 
-Current slice: deterministic Semantic Engine only. Quest, outcome, rewards, growth, and World State remain deferred to G4/G5.
+Completed slice: deterministic Semantic Engine only. Quest, outcome, rewards, growth, and World State remain deferred to G4/G5.
 
 1. Deterministic work-phase state machine.
 2. Six-domain classification and Activity Mix.
 3. Quest lifecycle and Run-to-Quest association.
 4. Outcome confidence, evidence policy, rewards, anti-abuse, and world progression.
+
+G3 exit evidence: canonical semantic timeline, bounded impact weights, six-domain Activity Mix, hierarchy preservation, event replay idempotency, and 26/26 combined tests.
 
 ## Milestone 4: Web world
 

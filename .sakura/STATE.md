@@ -1,6 +1,6 @@
 # State
 
-- Current milestone: Milestone 3, Deterministic Semantic Engine — in progress
-- Current item: SEMANTIC-01 / SEMANTIC-02 — core rules and fixture tests
-- Exact next action: Integrate the semantic batch, run the full regression suite, and commit/push the G3 slice.
+- Current milestone: Milestone 3, Deterministic Semantic Engine — complete
+- Current item: SEMANTIC-INT-01 — complete
+- Exact next action: Define and implement the smallest Quest lifecycle and outcome/evidence slice for G4.
 - Blockers: None. GitHub remote is configured; the main integration path owns commits and pushes.

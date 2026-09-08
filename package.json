@@ -5,7 +5,8 @@
     "test": "npm run test:all",
     "test:all": "node --test tests/ai-quest-world/*.test.mjs",
     "test:phase1": "node --test tests/ai-quest-world/phase1.test.mjs",
-    "test:persistence": "node --test tests/ai-quest-world/persistence.test.mjs"
+    "test:persistence": "node --test tests/ai-quest-world/persistence.test.mjs",
+    "test:semantic": "node --test tests/ai-quest-world/semantic.test.mjs"
   },
   "engines": {
     "node": ">=22.13.0"
