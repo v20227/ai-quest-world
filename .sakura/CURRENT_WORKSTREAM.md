@@ -50,6 +50,7 @@ Deliver the v0.1 local-first world pipeline. The Codex adapter remains a strict 
 ## Repair history
 
 - G2 batch review repaired full-envelope game-semantic rejection, JSON-safe value checks, and private SQLite handle encapsulation.
+- VERSION-RECONCILIATION-01 repaired the stale Sakura display-version ledger by counting every Git commit once and associating each increment with its triggering commit.
 
 ## Acceptance result
 

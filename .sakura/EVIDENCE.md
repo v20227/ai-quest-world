@@ -99,3 +99,8 @@
 ## Remaining verification
 
 - No v0.1 acceptance checks remain. Further work should begin as a separately scoped v0.2 goal.
+
+## Version ledger repair
+
+- Compared `.sakura/RELEASE.md` with the complete reverse Git history and found 15 existing commits represented by only 8 recorded increments.
+- Reconciled the missing scope, Web, integration, fix, Codex adapter, and acceptance commits, then counted this release-ledger repair exactly once.
