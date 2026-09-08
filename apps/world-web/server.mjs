@@ -8,6 +8,7 @@ import { calculateProgression } from "../../core/game/progression-policy.mjs";
 import { QuestEngine } from "../../core/game/quest-engine.mjs";
 import { analyzeRuntimeEvents } from "../../core/semantic/semantic-engine.mjs";
 import { WorldStateEngine } from "../../core/world/world-state-engine.mjs";
+import { PersistentWorldRuntime } from "./world-runtime.mjs";
 
 const APP_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_FILES = new Map([
@@ -63,11 +64,11 @@ export function buildDemoSnapshot({ mode = "canonical" } = {}) {
   };
 }
 
-/** @returns {import("node:http").Server} */
-export function createWorldWebServer() {
+/** @param {{runtime?: PersistentWorldRuntime|null}=} options @returns {import("node:http").Server} */
+export function createWorldWebServer({ runtime = null } = {}) {
   return createServer(async (request, response) => {
     try {
-      await handleRequest(request, response);
+      await handleRequest(request, response, runtime);
     } catch (error) {
       if (!response.headersSent) {
         response.writeHead(500, { "content-type": "application/json; charset=utf-8" });
@@ -81,12 +82,15 @@ export function createWorldWebServer() {
 /** @param {{port?: number, host?: string}=} options */
 export function startWorldWebServer({
   port = Number(process.env.AI_QUEST_WORLD_PORT ?? 4173),
-  host = "127.0.0.1"
+  host = "127.0.0.1",
+  path = process.env.AI_QUEST_WORLD_DB ?? "storage/sqlite/ai-quest-world.sqlite"
 } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     throw new TypeError("port must be an integer between 0 and 65535");
   }
-  const server = createWorldWebServer();
+  const runtime = new PersistentWorldRuntime({ path });
+  const server = createWorldWebServer({ runtime });
+  server.on("close", () => runtime.close());
   server.listen(port, host, () => {
     const address = server.address();
     const resolvedPort = typeof address === "object" && address !== null ? address.port : port;
@@ -95,7 +99,7 @@ export function startWorldWebServer({
   return server;
 }
 
-async function handleRequest(request, response) {
+async function handleRequest(request, response, runtime) {
   if (request.method !== "GET") {
     response.writeHead(405, { allow: "GET" });
     response.end();
@@ -113,6 +117,17 @@ async function handleRequest(request, response) {
     const snapshot = buildDemoSnapshot({ mode });
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
     response.end(JSON.stringify(snapshot));
+    return;
+  }
+
+  if (requestUrl.pathname === "/api/world") {
+    if (runtime === null) {
+      response.writeHead(503, { "content-type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ error: "Persistent World runtime is not configured" }));
+      return;
+    }
+    response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+    response.end(JSON.stringify({ ...runtime.getSnapshot(), diagnostics: runtime.getDiagnostics() }));
     return;
   }
 

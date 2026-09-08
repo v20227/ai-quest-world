@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import { buildDemoSnapshot, createWorldWebServer } from "../../apps/world-web/server.mjs";
+import { createSimulatedRunSequence } from "../../adapters/first-harness/simulated-adapter.mjs";
+import { PersistentWorldRuntime } from "../../apps/world-web/world-runtime.mjs";
 
 test("canonical demo snapshot exposes an authoritative completed world", () => {
   const snapshot = buildDemoSnapshot();
@@ -64,7 +69,9 @@ test("world web serves the read model and static presentation", async (t) => {
 
   const pageResponse = await fetch(`${origin}/`);
   assert.equal(pageResponse.status, 200);
-  assert.match(await pageResponse.text(), /class="world-scene"/);
+  const page = await pageResponse.text();
+  assert.match(page, /class="world-scene"/);
+  assert.match(page, /id="reload-label"/);
 
   const scriptResponse = await fetch(`${origin}/app.mjs`);
   assert.equal(scriptResponse.status, 200);
@@ -76,4 +83,44 @@ test("world web serves the read model and static presentation", async (t) => {
   const methodResponse = await fetch(`${origin}/api/demo`, { method: "POST" });
   assert.equal(methodResponse.status, 405);
   assert.equal(methodResponse.headers.get("allow"), "GET");
+});
+
+test("persistent Web endpoint survives restart and replays events idempotently", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "ai-quest-world-web-runtime-"));
+  t.after(async () => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "world.sqlite");
+  const events = createSimulatedRunSequence({ includeChildRun: true });
+
+  const firstRuntime = new PersistentWorldRuntime({ path });
+  const observer = firstRuntime.createObserver();
+  for (const event of events) {
+    await observer.emit(event);
+  }
+  const firstSnapshot = firstRuntime.getSnapshot();
+  assert.equal(observer.emittedEvents.length, events.length);
+  assert.equal(firstSnapshot.world.guild.state, "RESTORED");
+  assert.equal(firstSnapshot.quests.length, 1);
+  assert.equal(firstSnapshot.progressions[0].loot_refs.length, 1);
+
+  const firstServer = createWorldWebServer({ runtime: firstRuntime });
+  await new Promise((resolve) => firstServer.listen(0, "127.0.0.1", resolve));
+  const firstAddress = firstServer.address();
+  const firstResponse = await fetch(`http://127.0.0.1:${firstAddress.port}/api/world`);
+  assert.equal(firstResponse.status, 200);
+  const firstPayload = await firstResponse.json();
+  assert.equal(firstPayload.diagnostics.event_count, events.length);
+  assert.equal(firstPayload.diagnostics.quest_count, 1);
+  assert.equal(firstPayload.diagnostics.progression_count, 1);
+  await new Promise((resolve) => firstServer.close(resolve));
+
+  const reopenedRuntime = new PersistentWorldRuntime({ path });
+  t.after(() => reopenedRuntime.close());
+  const replay = reopenedRuntime.ingest(events);
+  assert.equal(replay.insertedCount, 0);
+  assert.equal(replay.duplicateCount, events.length);
+  assert.deepEqual(replay.snapshot, {
+    world: firstPayload.world,
+    quests: firstPayload.quests,
+    progressions: firstPayload.progressions
+  });
 });

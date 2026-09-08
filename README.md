@@ -103,7 +103,9 @@ To preview the current world-first Web slice locally:
 npm run dev
 ```
 
-Then open `http://127.0.0.1:4173`. The preview serves a deterministic simulated return through `/api/demo`; the browser only renders the authoritative World State, Quest, and progression read model returned by that endpoint. The real harness adapter and SQLite-backed live API remain later v0.1 milestones.
+Then open `http://127.0.0.1:4173`. The root page reads the local SQLite-backed World State, Quest, and progression read models through `/api/world`; a fresh database correctly starts as an empty Small Camp. Add `?source=demo` when you need the deterministic evidence-rich fixture for visual checks. The API also accepts incremental Observer events through the existing local runtime boundary; no external AI API is needed.
+
+The default database is `storage/sqlite/ai-quest-world.sqlite` and can be changed with `AI_QUEST_WORLD_DB=/path/to/world.sqlite npm run dev`.
 
 ## Before implementation
 
