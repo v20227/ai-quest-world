@@ -28,6 +28,7 @@ async function main() {
       runId: process.env.AI_QUEST_WORLD_CODEX_RUN_ID,
       workspaceId: process.env.AI_QUEST_WORLD_WORKSPACE_ID,
       projectId: process.env.AI_QUEST_WORLD_PROJECT_ID,
+      artifactPaths: process.env.AI_QUEST_WORLD_ARTIFACT_PATHS === "1",
       extraArgs: ["--sandbox", "read-only"]
     });
 

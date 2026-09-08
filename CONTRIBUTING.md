@@ -42,8 +42,9 @@ The delivery unit is a complete outcome or bounded milestone slice, not an indiv
 - Worker contexts may implement independent scopes and run fast syntax or focused smoke checks while developing.
 - Do not pause the whole workstream for a full test suite or review after every small edit.
 - When a coherent batch is ready, the integration owner runs the full suite, diff check, scope review, and one focused architectural review.
-- The integration owner owns commits, branch synchronization, merges, and pushes to `main`.
-- Support contexts do not use credentials or perform GitHub writes; their changes are integrated only after the batch gate passes.
+- Workers may commit their assigned scope in isolated task branches. The integration owner coordinates version allocation, branch synchronization, review, and all merges or pushes to `main`.
+- GitHub branch pushes require an explicitly assigned scope. Workers never merge their own work or change repository permissions. Integration happens only after the batch gate passes.
+- Before each commit, coordinate the next logical version event in `.sakura/RELEASE.md` and include it with the work. A fix and its recording commit count once; rebase replacements do not count again. Prefer fast-forward integration when possible; any new merge commit must carry its own counted ledger event.
 
 ## Merge flow
 

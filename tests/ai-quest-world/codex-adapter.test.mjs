@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -55,8 +55,8 @@ test("Codex CLI adapter declares honest capabilities and maps public JSONL facts
   const lines = [
     { type: "thread.started", thread_id: "thread-codex-001" },
     { type: "turn.started" },
-    { type: "item.started", item: { id: "item-command", type: "command_execution", status: "in_progress", command: "npm test" } },
-    { type: "item.completed", item: { id: "item-command", type: "command_execution", status: "completed", exit_code: 0, command: "npm test" } },
+    { type: "item.started", item: { id: "item-command", type: "command_execution", status: "in_progress", command: "node --test" } },
+    { type: "item.completed", item: { id: "item-command", type: "command_execution", status: "completed", exit_code: 0, command: "node --test", aggregated_output: "# tests 1\n# pass 1\n# fail 0" } },
     { type: "item.completed", item: { id: "item-reasoning", type: "reasoning", summary: "private reasoning must not cross the adapter" } },
     { type: "item.completed", item: { id: "item-message", type: "agent_message", text: "visible response is not runtime metadata" } },
     { type: "item.completed", item: { id: "item-file", type: "file_change", changes: [{ path: "/workspace/src/AuthService.js", kind: "add" }] } },
@@ -77,7 +77,7 @@ test("Codex CLI adapter declares honest capabilities and maps public JSONL facts
   assert.equal(capabilities.adapter_id, CODEX_CLI_ADAPTER_ID);
   assert.equal(capabilities.observe.tool_calls, true);
   assert.equal(capabilities.observe.validation, true);
-  assert.equal(capabilities.observe.artifacts, true);
+  assert.equal(capabilities.observe.artifacts, false);
   assert.equal(capabilities.observe.outcome_evidence, true);
   assert.equal(capabilities.observe.usage_tokens, true);
   assert.equal(capabilities.content.tool_arguments, false);
@@ -96,17 +96,13 @@ test("Codex CLI adapter declares honest capabilities and maps public JSONL facts
     "tool.completed",
     "validation.completed",
     "resource.changed",
-    "artifact.created",
     "usage.reported",
     "run.completed"
   ]);
   assert.equal(observer.events.find((event) => event.type === "tool.completed").attributes.success, true);
   assert.equal(observer.events.find((event) => event.type === "validation.completed").status, "succeeded");
   assert.equal(observer.events.find((event) => event.type === "resource.changed").attributes.resource_kind, "file");
-  const artifactEvent = observer.events.find((event) => event.type === "artifact.created");
-  assert.equal(artifactEvent.attributes.kind, "code");
-  assert.equal(artifactEvent.attributes.durable, true);
-  assert.equal(artifactEvent.evidence_refs[0].content_available, false);
+  assert.equal(observer.events.some((event) => event.type.startsWith("artifact.")), false);
   assert.equal(observer.events.find((event) => event.type === "usage.reported").attributes.total_tokens, 20);
   assert.equal(observer.events.some((event) => JSON.stringify(event).includes("private reasoning")), false);
   assert.equal(observer.events.some((event) => JSON.stringify(event).includes("visible response")), false);
@@ -147,6 +143,7 @@ test("Codex CLI adapter treats malformed JSONL as a blocking runtime failure", a
 test("Codex-shaped JSONL reaches the persistent World State without Game Core changes", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "ai-quest-world-codex-runtime-"));
   t.after(async () => rm(directory, { recursive: true, force: true }));
+  await writeFile(join(directory, "feature.js"), "export const value = 1;\n");
   const runtime = new PersistentWorldRuntime({ path: join(directory, "world.sqlite") });
   t.after(() => runtime.close());
 
@@ -154,12 +151,14 @@ test("Codex-shaped JSONL reaches the persistent World State without Game Core ch
     prompt: "Create and verify the change",
     title: "Create and verify the change",
     runId: "run-codex-runtime-001",
+    cwd: directory,
+    artifactPaths: true,
     clock: fixedClock,
     spawnProcess: fakeSpawn([
       { type: "thread.started", thread_id: "thread-codex-runtime-001" },
-      { type: "item.started", item: { id: "item-test", type: "command_execution", command: "npm test", status: "in_progress" } },
-      { type: "item.completed", item: { id: "item-test", type: "command_execution", command: "npm test", exit_code: 0, status: "completed" } },
-      { type: "item.completed", item: { id: "item-file", type: "file_change", changes: [{ path: "/workspace/src/feature.js", kind: "add" }], status: "completed" } },
+      { type: "item.completed", item: { id: "item-file", type: "file_change", changes: [{ path: "feature.js", kind: "add" }], status: "completed" } },
+      { type: "item.started", item: { id: "item-test", type: "command_execution", command: "node --test", status: "in_progress" } },
+      { type: "item.completed", item: { id: "item-test", type: "command_execution", command: "node --test", exit_code: 0, status: "completed", aggregated_output: "# tests 1\n# pass 1\n# fail 0" } },
       { type: "turn.completed", usage: { input_tokens: 10, output_tokens: 5 } }
     ])
   });

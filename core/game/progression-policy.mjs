@@ -28,7 +28,7 @@ export const SEMANTIC_XP_CAPS = Object.freeze({
   exploration_activity: 4,
   implementation_activity: 12,
   validation_started: 2,
-  validation_failure: 6,
+  validation_failure: 4,
   recovery_activity: 10,
   validation_success: 8,
   artifact_delivered: 8,
@@ -144,7 +144,8 @@ export function calculateProgression(questInput, semanticInputs = []) {
     SEMANTIC_KINDS.map((kind) => [kind, roundNonNegative(rawCreditByKind[kind] * outcomeMultiplier)])
   );
   const activityXp = Object.values(creditByKind).reduce((sum, credit) => sum + credit, 0);
-  const outcomeBonus = isTerminal ? OUTCOME_BONUSES[outcomeConfidence] : 0;
+  const hasMeaningfulWork = records.some(record => !["run_started", "run_completed", "run_failed", "run_cancelled"].includes(record.kind));
+  const outcomeBonus = isTerminal && hasMeaningfulWork ? OUTCOME_BONUSES[outcomeConfidence] : 0;
   const domainProgress = Object.fromEntries(
     SEMANTIC_DOMAINS.map((domain) => [
       domain,
