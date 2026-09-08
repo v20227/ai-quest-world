@@ -1,4 +1,5 @@
 import { parseRuntimeEvent } from "../../packages/uarp/runtime-event.mjs";
+import { RunLineage, orderRuntimeEvents } from "../../packages/uarp/run-lineage.mjs";
 import {
   createEmptyDomainScores,
   SEMANTIC_DOMAINS,
@@ -39,8 +40,10 @@ const CREATIVE_EXTENSIONS = new Set(["gif", "jpeg", "jpg", "mov", "mp3", "mp4", 
  */
 export class SemanticEngine {
   #states = new Map();
-  #runRoots = new Map();
+  #lineage;
   #processedEventIds = new Set();
+  #history = new Map();
+  constructor({ lineage = new RunLineage() } = {}) { this.#lineage = lineage; }
 
   /**
    * @param {unknown} input
@@ -48,11 +51,28 @@ export class SemanticEngine {
    */
   ingest(input) {
     const event = parseRuntimeEvent(input);
+    if (this.#history.has(event.event_id)) return null;
+    return this.process([event]).find(record => record.source_event_id === event.event_id) ?? null;
+  }
+
+  process(inputs) {
+    for (const event of inputs.map(parseRuntimeEvent)) if (!this.#history.has(event.event_id)) this.#history.set(event.event_id, event);
+    const events = orderRuntimeEvents([...this.#history.values()]);
+    this.#states.clear();
+    this.#processedEventIds.clear();
+    this.#lineage = new RunLineage(events);
+    return events.map(event => this.#ingestKnown(event)).filter(Boolean);
+  }
+
+  #ingestKnown(input) {
+    const event = parseRuntimeEvent(input);
     if (this.#processedEventIds.has(event.event_id)) {
       return null;
     }
 
-    const rootRunId = this.#resolveRootRunId(event.context);
+    this.#lineage.observe(event);
+    const rootRunId = this.#lineage.rootFor(event.context.run_id);
+    if (rootRunId === null) return null;
     const state = this.#getOrCreateState(rootRunId);
     const interpretation = interpretEvent(event, state);
 
@@ -110,8 +130,9 @@ export class SemanticEngine {
 
   reset() {
     this.#states.clear();
-    this.#runRoots.clear();
+    this.#lineage = new RunLineage();
     this.#processedEventIds.clear();
+    this.#history.clear();
   }
 
   #getOrCreateState(rootRunId) {
@@ -130,21 +151,6 @@ export class SemanticEngine {
     return state;
   }
 
-  #resolveRootRunId(context) {
-    const knownRoot = this.#runRoots.get(context.run_id);
-    if (knownRoot !== undefined) {
-      return knownRoot;
-    }
-
-    const rootRunId = context.parent_run_id === undefined
-      ? context.run_id
-      : this.#runRoots.get(context.parent_run_id) ?? context.parent_run_id;
-    this.#runRoots.set(context.run_id, rootRunId);
-    if (context.parent_run_id !== undefined && !this.#runRoots.has(context.parent_run_id)) {
-      this.#runRoots.set(context.parent_run_id, rootRunId);
-    }
-    return rootRunId;
-  }
 }
 
 /**
@@ -158,17 +164,13 @@ export function analyzeRuntimeEvents(events) {
     throw new TypeError("events must be an array");
   }
 
-  const engine = new SemanticEngine();
-  const records = [];
+  events = orderRuntimeEvents(events);
+  const engine = new SemanticEngine({ lineage: new RunLineage(events) });
+  const records = engine.process(events);
   const rootRunIds = [];
   const seenRoots = new Set();
 
-  for (const event of events) {
-    const record = engine.ingest(event);
-    if (record === null) {
-      continue;
-    }
-    records.push(record);
+  for (const record of records) {
     if (!seenRoots.has(record.root_run_id)) {
       seenRoots.add(record.root_run_id);
       rootRunIds.push(record.root_run_id);

@@ -69,6 +69,12 @@ const DOMAIN_CREDIT_CAP = 20;
  */
 export function calculateProgression(questInput, semanticInputs = []) {
   const quest = validateQuest(questInput);
+  if (quest.settlement_snapshot !== undefined) {
+    const records = Array.isArray(semanticInputs) ? semanticInputs : semanticInputs.records;
+    if (!Array.isArray(records)) throw new TypeError("semantic records must be an array");
+    const ids = new Set(quest.settlement_snapshot.event_ids);
+    return calculateProgression(quest.settlement_snapshot, records.filter(record => ids.has(record.source_event_id)));
+  }
   const inputs = Array.isArray(semanticInputs)
     ? semanticInputs
     : semanticInputs !== null && typeof semanticInputs === "object" && Array.isArray(semanticInputs.records)

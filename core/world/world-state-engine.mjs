@@ -265,6 +265,14 @@ function applyProgression(state, progression) {
   next.return_highlights = changes
     .sort((left, right) => right.priority - left.priority || left.target.localeCompare(right.target))
     .slice(0, 3);
+  next.return_history ??= [];
+  next.return_history.push({
+    return_id: `return:${quest.quest_id}:${quest.event_ids.at(-1)}`,
+    quest_id: quest.quest_id,
+    title: quest.title,
+    timestamp,
+    highlights: cloneJson(next.return_highlights)
+  });
   return validateWorldState(next);
 }
 

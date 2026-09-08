@@ -1,4 +1,5 @@
 import { parseRuntimeEvent } from "../../packages/uarp/runtime-event.mjs";
+import { RunLineage, orderRuntimeEvents } from "../../packages/uarp/run-lineage.mjs";
 import {
   createEmptyDomainScores,
   validateSemanticRecord
@@ -18,8 +19,10 @@ import { classifyOutcome } from "./outcome-policy.mjs";
 export class QuestEngine {
   #states = new Map();
   #runToQuest = new Map();
-  #runRoots = new Map();
+  #lineage = new RunLineage();
   #processedEventIds = new Set();
+  #history = new Map();
+  #semanticHistory = new Map();
 
   /**
    * @param {unknown} input
@@ -28,6 +31,20 @@ export class QuestEngine {
    */
   ingest(input, semanticRecord = null) {
     const event = parseRuntimeEvent(input);
+    if (this.#history.has(event.event_id)) return null;
+    const snapshot = Array.isArray(semanticRecord);
+    const events = orderRuntimeEvents([...this.#history.values(), event]);
+    const lineage = new RunLineage(events);
+    if (!snapshot && (events.at(-1).event_id !== event.event_id || [...this.#history.values()].some(previous =>
+      lineage.rootFor(previous.context.run_id) !== this.#lineage.rootFor(previous.context.run_id)))) {
+      throw new QuestEngineError("Late or re-associated input requires the complete current semantic record array");
+    }
+    this.process([event], snapshot ? semanticRecord : [...this.#semanticHistory.values(), ...(semanticRecord === null ? [] : [semanticRecord])]);
+    return this.getQuestForRun(event.context.run_id);
+  }
+
+  #ingestKnown(input, semanticRecord = null) {
+    const event = parseRuntimeEvent(input);
     if (this.#processedEventIds.has(event.event_id)) {
       return null;
     }
@@ -35,7 +52,9 @@ export class QuestEngine {
     const semantic = semanticRecord === null || semanticRecord === undefined
       ? null
       : validateSemanticRecord(semanticRecord);
-    const rootRunId = this.#resolveRootRunId(event.context);
+    this.#lineage.observe(event);
+    const rootRunId = this.#lineage.rootFor(event.context.run_id);
+    if (rootRunId === null) return null;
     if (semantic !== null && semantic.root_run_id !== rootRunId) {
       throw new QuestEngineError(
         `semantic record ${semantic.source_event_id} does not belong to root run ${rootRunId}`
@@ -44,7 +63,16 @@ export class QuestEngine {
 
     const state = this.#getOrCreateState(rootRunId, event);
     const quest = state.quest;
-    const rootTerminal = isRootTerminal(event, rootRunId);
+    const driver = this.#lineage.isDriver(event.context.run_id);
+    const finalSettlement = quest.settlement_snapshot?.status === "COMPLETED"
+      && ["VERIFIED", "SUPPORTED"].includes(quest.settlement_snapshot.outcome_confidence);
+    if (event.type === "run.started" && driver && !finalSettlement) {
+      state.driver = event.context.run_id;
+      quest.status = "CANDIDATE";
+      quest.outcome_confidence = null;
+      quest.phase = "DEPART";
+    }
+    const rootTerminal = driver && event.context.run_id === state.driver && isTerminalType(event.type);
     const wasTerminal = isTerminalStatus(quest.status);
 
     state.events.push(cloneJson(event));
@@ -66,7 +94,7 @@ export class QuestEngine {
       applySemanticRecord(quest, semantic);
     }
 
-    const outcome = classifyOutcome(state.events, { rootRunId });
+    const outcome = classifyOutcome(state.events, { rootRunId: state.driver });
     quest.validation_summary = outcome.validation_summary;
     quest.artifact_refs = outcome.artifact_refs;
 
@@ -79,6 +107,10 @@ export class QuestEngine {
     }
 
     quest.updated_at = event.timestamp;
+    if (!wasTerminal && rootTerminal) {
+      const { settlement_snapshot, ...settlement } = quest;
+      quest.settlement_snapshot = cloneJson(settlement);
+    }
     validateQuest(quest);
     this.#processedEventIds.add(event.event_id);
 
@@ -86,7 +118,8 @@ export class QuestEngine {
   }
 
   /**
-   * Ingest an event sequence and optionally match semantic records by source event ID.
+   * Retain factual history and replace its semantic projection with the complete
+   * current record snapshot, including removal of retracted interpretations.
    *
    * @param {unknown[]} events
    * @param {import("../semantic/semantic-types.mjs").SemanticRecord[]|{records?: import("../semantic/semantic-types.mjs").SemanticRecord[]}} [semanticRecords]
@@ -97,10 +130,18 @@ export class QuestEngine {
       throw new TypeError("events must be an array");
     }
     const records = Array.isArray(semanticRecords) ? semanticRecords : semanticRecords.records ?? [];
-    const recordsByEventId = new Map(records.map((record) => [record.source_event_id, record]));
+    for (const event of events.map(parseRuntimeEvent)) if (!this.#history.has(event.event_id)) this.#history.set(event.event_id, event);
+    this.#semanticHistory.clear();
+    for (const record of records) this.#semanticHistory.set(record.source_event_id, validateSemanticRecord(record));
+    events = orderRuntimeEvents([...this.#history.values()]);
+    this.#states.clear();
+    this.#runToQuest.clear();
+    this.#processedEventIds.clear();
+    this.#lineage = new RunLineage(events);
     for (const event of events) {
-      const eventId = typeof event === "string" ? parseRuntimeEvent(event).event_id : event?.event_id;
-      this.ingest(event, recordsByEventId.get(eventId) ?? null);
+      if (this.#lineage.rootFor(event.context.run_id) === null) continue;
+      const record = this.#semanticHistory.get(event.event_id);
+      this.#ingestKnown(event, record ? { ...record, root_run_id: this.#lineage.rootFor(event.context.run_id) } : null);
     }
     return this.getQuests();
   }
@@ -133,8 +174,10 @@ export class QuestEngine {
   reset() {
     this.#states.clear();
     this.#runToQuest.clear();
-    this.#runRoots.clear();
+    this.#lineage = new RunLineage();
     this.#processedEventIds.clear();
+    this.#history.clear();
+    this.#semanticHistory.clear();
   }
 
   #getOrCreateState(rootRunId, event) {
@@ -168,27 +211,12 @@ export class QuestEngine {
       updated_at: event.timestamp
     };
     validateQuest(quest);
-    state = { quest, events: [] };
+    state = { quest, events: [], driver: rootRunId };
     this.#states.set(rootRunId, state);
     this.#runToQuest.set(rootRunId, quest.quest_id);
     return state;
   }
 
-  #resolveRootRunId(context) {
-    const knownRoot = this.#runRoots.get(context.run_id);
-    if (knownRoot !== undefined) {
-      return knownRoot;
-    }
-
-    const rootRunId = context.parent_run_id === undefined
-      ? context.run_id
-      : this.#runRoots.get(context.parent_run_id) ?? context.parent_run_id;
-    this.#runRoots.set(context.run_id, rootRunId);
-    if (context.parent_run_id !== undefined && !this.#runRoots.has(context.parent_run_id)) {
-      this.#runRoots.set(context.parent_run_id, rootRunId);
-    }
-    return rootRunId;
-  }
 }
 
 export class QuestEngineError extends Error {
@@ -292,11 +320,7 @@ function isRootRunStarted(event, rootRunId) {
     event.context.parent_run_id === undefined;
 }
 
-function isRootTerminal(event, rootRunId) {
-  return event.context.run_id === rootRunId &&
-    event.context.parent_run_id === undefined &&
-    ["run.completed", "run.failed", "run.cancelled"].includes(event.type);
-}
+function isTerminalType(type) { return ["run.completed", "run.failed", "run.cancelled"].includes(type); }
 
 function isTerminalSemantic(record) {
   return ["run_completed", "run_failed", "run_cancelled"].includes(record.kind);

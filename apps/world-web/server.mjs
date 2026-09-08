@@ -15,7 +15,8 @@ const PUBLIC_FILES = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
-  ["/app.mjs", ["app.mjs", "text/javascript; charset=utf-8"]]
+  ["/app.mjs", ["app.mjs", "text/javascript; charset=utf-8"]],
+  ["/view-state.mjs", ["view-state.mjs", "text/javascript; charset=utf-8"]]
 ]);
 
 /**
@@ -127,7 +128,7 @@ async function handleRequest(request, response, runtime) {
       return;
     }
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-    response.end(JSON.stringify({ ...runtime.getSnapshot(), diagnostics: runtime.getDiagnostics() }));
+    response.end(JSON.stringify({ ...runtime.getSnapshot({ at: new Date().toISOString() }), diagnostics: runtime.getDiagnostics() }));
     return;
   }
 

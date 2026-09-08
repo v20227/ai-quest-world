@@ -1,5 +1,12 @@
 # Architecture
 
+## Trusted-loop runtime
+
+- `packages/uarp/run-lineage.mjs` owns explicit factual parent/resume resolution and stable event-time ordering. Cycles/conflicting direct relationships are withheld from derived rewards.
+- `SemanticEngine.process` returns the complete current interpretation snapshot. `QuestEngine.process` retains raw history but replaces semantic records wholesale, including retractions. For out-of-order/re-associated incremental input, pass `semantic.process([event])` to `quest.ingest(event, records)`; scalar append rejects unsafe history changes.
+- `apps/world-web/project-world.mjs` composes one full deterministic projection. `storage/sqlite/projection-store.mjs` replaces Quest, progression, world and applied-input rows atomically under schema4, recording policy version and raw event count. Runtime no longer coordinates separate Quest/World repository writes. Raw facts remain intact through policy rebuilds.
+- `core/world/world-view.mjs` advances temporary activity for a requested display time without persisting rounded decay or changing permanent progress. Core-generated return history carries stable identities. Browser helpers select active/latest tasks and combine factual artifacts with reward references without granting rewards.
+
 ## Phase 1 module map
 
 ```text

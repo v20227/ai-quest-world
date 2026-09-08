@@ -1,14 +1,9 @@
 import { LocalRuntimeObserver } from "../../observer/runtime-observer.mjs";
 import { assertHarnessAdapter } from "../../packages/adapter-core/contracts.mjs";
-import { calculateProgression } from "../../core/game/progression-policy.mjs";
-import { QuestEngine } from "../../core/game/quest-engine.mjs";
-import { analyzeRuntimeEvents } from "../../core/semantic/semantic-engine.mjs";
-import { WorldStateEngine } from "../../core/world/world-state-engine.mjs";
-import {
-  SqliteEventStore,
-  SqliteQuestStore,
-  SqliteWorldStateStore
-} from "../../storage/sqlite/index.mjs";
+import { SqliteEventStore } from "../../storage/sqlite/index.mjs";
+import { SqliteProjectionStore } from "../../storage/sqlite/projection-store.mjs";
+import { projectWorld, PROJECTION_POLICY_VERSION } from "./project-world.mjs";
+import { worldAtTime } from "../../core/world/world-view.mjs";
 
 /**
  * Local projection runtime for the Web app. It owns orchestration only: the
@@ -17,8 +12,8 @@ import {
  */
 export class PersistentWorldRuntime {
   #eventStore;
-  #questStore;
-  #worldStore;
+  #projectionStore;
+  #memory;
   #observer;
   #closed = false;
 
@@ -29,9 +24,9 @@ export class PersistentWorldRuntime {
     }
 
     this.#eventStore = new SqliteEventStore({ path });
+    this.#memory = path === ":memory:";
     try {
-      this.#questStore = new SqliteQuestStore({ path });
-      this.#worldStore = new SqliteWorldStateStore({ path });
+      this.#projectionStore = new SqliteProjectionStore({ path });
     } catch (error) {
       this.#eventStore.close();
       throw error;
@@ -94,23 +89,23 @@ export class PersistentWorldRuntime {
   }
 
   /** @returns {{world: Record<string, unknown>, quests: Record<string, unknown>[], progressions: Record<string, unknown>[]}} */
-  getSnapshot() {
+  getSnapshot({ at } = {}) {
     this.#assertOpen();
-    return {
-      world: this.#worldStore.getState(),
-      quests: this.#questStore.listQuests(),
-      progressions: this.#questStore.listProgressions()
-    };
+    this.#materialize();
+    const snapshot = this.#projectionStore.getSnapshot();
+    if (at !== undefined) snapshot.world = worldAtTime(snapshot.world, at, snapshot.quests);
+    return snapshot;
   }
 
   /** @returns {{event_count: number, quest_count: number, progression_count: number, applied_input_count: number}} */
   getDiagnostics() {
     this.#assertOpen();
+    const snapshot = this.getSnapshot();
     return {
       event_count: this.#eventStore.count(),
-      quest_count: this.#questStore.countQuests(),
-      progression_count: this.#questStore.countProgressions(),
-      applied_input_count: this.#worldStore.countApplied()
+      quest_count: snapshot.quests.length,
+      progression_count: snapshot.progressions.length,
+      applied_input_count: this.#projectionStore.countApplied()
     };
   }
 
@@ -121,38 +116,18 @@ export class PersistentWorldRuntime {
     }
     this.#closed = true;
     this.#eventStore.close();
-    this.#questStore.close();
-    this.#worldStore.close();
+    this.#projectionStore.close();
   }
 
   #materialize() {
     this.#assertOpen();
-    const events = this.#eventStore.list();
-    if (events.length === 0) {
-      return;
+    const metadata = this.#projectionStore.getMetadata();
+    if (metadata?.policy_version === PROJECTION_POLICY_VERSION && metadata.event_count === this.#eventStore.count()) return;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const events = this.#eventStore.list();
+      if (this.#projectionStore.replace(projectWorld(events), this.#memory ? {} : { expectedEventCount: events.length })) return;
     }
-
-    const semantic = analyzeRuntimeEvents(events);
-    const questEngine = new QuestEngine();
-    questEngine.process(events, semantic.records);
-    const quests = questEngine.getQuests();
-
-    for (const quest of quests) {
-      this.#questStore.saveQuest(quest);
-      const progression = calculateProgression(
-        quest,
-        semantic.records.filter((record) => record.root_run_id === quest.root_run_id)
-      );
-      this.#questStore.saveProgression(progression);
-    }
-
-    const worldEngine = new WorldStateEngine({ repository: this.#worldStore });
-    for (const event of events) {
-      worldEngine.ingest(event);
-    }
-    for (const progression of this.#questStore.listProgressions()) {
-      worldEngine.applyProgression(progression);
-    }
+    throw new Error("Event history changed during projection; retry after current ingestion completes");
   }
 
   #assertOpen() {

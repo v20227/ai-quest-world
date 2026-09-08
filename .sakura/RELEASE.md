@@ -1,7 +1,7 @@
 # Release
 
-- Display version: `0.100.17`
-- Machine version: `0.100.17`
+- Display version: `0.100.18`
+- Machine version: `0.100.18`
 - Baseline: new AI Quest World project
 - Increment events:
   - `PHASE1-FOUNDATION-01` -> `0.100.01`: completed UARP, Adapter Core, simulated Adapter, Observer, and Phase 1 verification. Commit: `7393e50`.
@@ -21,3 +21,4 @@
   - `V0.1-ACCEPTANCE-01` -> `0.100.15`: closed the AI Quest World v0.1 acceptance gate. Commit: `f2417dc`.
   - `VERSION-RECONCILIATION-01` -> `0.100.16`: reconciled the release ledger with every preceding Git commit and fixed the Sakura Dev version-accounting omission. Commit: the commit containing this release entry.
   - `TRUST-01` -> `0.100.17`: reopened v0.1 acceptance, repaired adapter validation and opt-in artifact evidence, unresolved validation outcome policy, and empty/repeated-failure rewards. Commit: the commit containing this release entry.
+  - `TRUST-LIVE-02` -> `0.100.18`: repaired explicit lineage, bounded recovery and atomic policy reprojection; added live multi-Quest refresh, one-return cursor, temporal views and complete factual artifact inventory; incorporated independent review regressions. Commit: the commit containing this release entry.

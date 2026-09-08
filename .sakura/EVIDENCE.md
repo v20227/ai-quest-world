@@ -1,5 +1,13 @@
 # Evidence
 
+## TRUST-02 / LIVE-01 working batch
+
+- Tested source: the `TRUST-LIVE-02` release event commit, before EXPERIENCE-01. Full suite passed 97 tests, including atomic rollback/replacement, old-policy rebuild, explicit resume recovery, orphan/conflicting lineage, incremental/full-batch equality, duplicate/restart equality, clock-driven decay and multi-Quest return/artifact helpers.
+- Isolated browser database: `/tmp/ai-quest-world-accept-5fw8bI/world.sqlite`, preview `http://127.0.0.1:4183/`. No user database was used.
+- Observed a fresh dormant world automatically become active after the first three simulated events; task title appeared without refresh. Remaining five events produced one Return Overlay with exactly three highlights, which automatically closed. Reopening the home page preserved the world and did not replay the return.
+- These browser inputs are contract-faithful simulated fixtures, not real Harness acceptance. Real engineering/non-code and artifact access remain open.
+- Independent integrated review executed 63 scoped checks and reproduced two omissions, retained as TRUST-F04/LIVE-F02. Parent repairs passed the full 97-test suite. A second active Quest then replaced the first completed Quest in the running browser without refresh; previous permanent XP/artifact totals remained unchanged.
+
 ## TRUST-01 checkpoint
 
 - Tested source: the TRUST-01 release event commit on `codex/v01-trusted-loop`.

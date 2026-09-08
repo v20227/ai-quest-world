@@ -2,7 +2,7 @@
  * @typedef {import("node:sqlite").DatabaseSync} DatabaseSync
  */
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 /** @type {ReadonlyMap<number, (database: DatabaseSync) => void>} */
 const MIGRATIONS = new Map([
@@ -66,6 +66,15 @@ const MIGRATIONS = new Map([
 
       CREATE INDEX IF NOT EXISTS idx_progressions_updated_at
         ON progressions (updated_at);
+    `);
+  }],
+  [4, (database) => {
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS projection_metadata (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        policy_version TEXT NOT NULL CHECK (length(trim(policy_version)) > 0),
+        event_count INTEGER NOT NULL CHECK (event_count >= 0)
+      );
     `);
   }]
 ]);

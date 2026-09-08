@@ -135,6 +135,17 @@ export function validateWorldState(value, path = "world_state") {
   validateNullableString(world.last_quest_id, `${path}.last_quest_id`);
   validateNullableTimestamp(world.last_return_at, `${path}.last_return_at`);
   validateHighlights(world.return_highlights, `${path}.return_highlights`);
+  if (world.return_history !== undefined) {
+    if (!Array.isArray(world.return_history)) throw new WorldStateValidationError(path, "return_history must be an array");
+    for (const entry of world.return_history) {
+      assertPlainRecord(entry, `${path}.return_history`);
+      for (const key of ["return_id", "quest_id", "title"]) {
+        if (typeof entry[key] !== "string" || !entry[key]) throw new WorldStateValidationError(path, "return identity and title are required");
+      }
+      assertTimestamp(entry.timestamp, `${path}.return_history.timestamp`);
+      validateHighlights(entry.highlights, `${path}.return_history.highlights`);
+    }
+  }
   validateMilestones(world.milestones, `${path}.milestones`);
   assertTimestamp(world.updated_at, `${path}.updated_at`);
   return world;

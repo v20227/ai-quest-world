@@ -14,9 +14,9 @@ The earlier delivery decision below is historical and superseded. v0.1 remains o
 | ID | Result | Owner | Prerequisite | Check | State |
 | --- | --- | --- | --- | --- | --- |
 | TRUST-01 | Conservative adapter evidence, outcome and empty-run settlement | adapters / core/game | Existing foundation | T1, T2 | Batch verified; integration pending |
-| TRUST-02 | Explicit resume association and safe derived-state rebuilding | core / storage / runtime | TRUST-01 contracts | T2, T5 | In progress |
-| LIVE-01 | Continuous multi-Quest world, durable return identity and clock projection | runtime / renderer | TRUST-02 | T4, T5 | Pending |
-| EXPERIENCE-01 | Minimal difficulty, artifact access and scoped world feedback | core / renderer | LIVE-01 | T6 | Pending |
+| TRUST-02 | Explicit resume association and safe derived-state rebuilding | core / storage / runtime | TRUST-01 contracts | T2, T5 | Batch verified; integration pending |
+| LIVE-01 | Continuous multi-Quest world, durable return identity and clock projection | runtime / renderer | TRUST-02 | T4, T5 | Batch verified; final browser matrix pending |
+| EXPERIENCE-01 | Minimal difficulty, artifact access and scoped world feedback | core / renderer | LIVE-01 | T6 | In progress |
 | ACCEPT-01 | Real engineering/non-code, negative paths, browser, restart and independent review | Integration | All preceding | T1–T6 | Pending |
 
 ## Current repair history
@@ -24,6 +24,11 @@ The earlier delivery decision below is historical and superseded. v0.1 remains o
 - TRUST-F01 at `57ca8f8`: empty lifecycle yielded 1 XP; `echo test` plus failed file change yielded Verified/32 XP/one loot; pass followed by failed validation yielded Verified/36 XP/one loot. Root causes: keyword classification, unconditional durable artifacts, any historical pass, unconditional unverified bonus. No repairs attempted before this workstream.
 - LIVE-F01 at `57ca8f8`: no automatic snapshot refresh; live refresh suppresses return; first-array task selection; no seen-return cursor or integrated time advance. Existing passing tests do not cover these user paths.
 - TRUST-F02 independent review: version/config-only tool modes could verify; pending/unknown retries could reuse an old pass or erase failure. Added mode exclusions and per-target unresolved-attempt tracking. The initial 71-test pass did not cover these cases; new regressions are required before commit.
+- TRUST-F03 independent review: unknown resume ancestors could settle, incremental public engines lost earlier lineage, and conflicting direct edges were accepted when their roots converged. Repairs retain full input history, require an observed driver ancestry and reject conflicting direct relationships. Dedicated regressions pass.
+- Settlement rule: explicit recovery may replace one failed/unverified settlement. A credible completion bounds subsequent activity. Late evidence whose factual timestamp precedes that completion may correct that same settlement during replay; the result must match full-batch projection. It must not append another completion reward or change the return identity merely because delivery was delayed.
+- TRUST-F04: independent review reproduced stale/retracted semantic records in public incremental composition. `QuestEngine.process` now replaces the complete semantic snapshot, and `ingest` accepts that snapshot array. Scalar append remains supported only when chronological and lineage-stable; unsafe late scalar input rejects before mutation. Reverse delivery and retraction regressions match batch projection.
+- LIVE-F02: postsettlement factual artifacts were hidden by a loot-only inventory. Inventory now merges durable factual references with loot and labels unrewarded facts without changing progression or return identity. Regression confirms two visible references, unchanged XP and one return.
+- EXPERIENCE-01 execution: core owns an evolving 1–5 estimate from distinct meaningful semantic phases and scope, observed value only at terminal, Unknown without evidence; no difficulty XP multiplier. Server owns opt-in artifact-root containment and registered-reference lookup with no arbitrary path endpoint. Renderer labels the estimate and opens only the server-provided local artifact link. Checks: deterministic/repeat invariance plus missing/out-of-root/symlink/hidden/executable-content file cases and browser open.
 
 ## Historical foundation records
 
