@@ -66,6 +66,7 @@ packages/
 
 adapters/
   first-harness/
+  codex-cli/
 
 observer/
 core/
@@ -106,6 +107,16 @@ npm run dev
 Then open `http://127.0.0.1:4173`. The root page reads the local SQLite-backed World State, Quest, and progression read models through `/api/world`; a fresh database correctly starts as an empty Small Camp. Add `?source=demo` when you need the deterministic evidence-rich fixture for visual checks. The API also accepts incremental Observer events through the existing local runtime boundary; no external AI API is needed.
 
 The default database is `storage/sqlite/ai-quest-world.sqlite` and can be changed with `AI_QUEST_WORLD_DB=/path/to/world.sqlite npm run dev`.
+
+To observe one local Codex CLI run and write its normalized facts into the same persistent world, use the read-only adapter command:
+
+```sh
+AI_QUEST_WORLD_CODEX_EXECUTABLE=/path/to/codex \
+AI_QUEST_WORLD_CODEX_CWD=/path/to/project \
+npm run observe:codex -- "describe the task to observe"
+```
+
+The command stores the resulting Quest, progression, artifact references, and World State in the configured SQLite database. It keeps reasoning, agent messages, full commands, and file paths outside the UARP event stream; run `npm run dev` separately to view the updated world.
 
 ## Before implementation
 
