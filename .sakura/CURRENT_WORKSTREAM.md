@@ -1,4 +1,31 @@
-# Current Workstream: AI Quest World v0.1 Delivery
+# Current Workstream: AI Quest World v0.1 Trusted Loop
+
+## Current acceptance gate
+
+The earlier delivery decision below is historical and superseded. v0.1 remains open until the following integrated conditions pass. Existing architectural boundaries, offline operation, metadata-first collection, deterministic replay, and the original scope remain mandatory.
+
+- T1: Ordinary commands are not validation; failed file operations are not artifacts; referenced outputs are real; later unresolved validation failures prevent Verified. Check: adapter/outcome adversarial tests.
+- T2: Empty runs earn no rewards; explicit child/resume relationships share one Quest and bounded settlement. Check: progression, association, restart/replay tests.
+- T3: Supported real CLI entry and capability limits are explicit; engineering and non-code work reach the same runtime without source-specific Game Core changes. Check: isolated real-run acceptance plus fixture regressions.
+- T4: World updates automatically, selects the correct active/latest Quest, presents each new return once, and preserves all task artifacts. Check: multi-Quest browser/integration tests.
+- T5: Temporary activity decays without losing permanent growth; old derived data can be rebuilt safely from stored facts after policy changes. Check: migration/reprojection and clock-controlled restart tests.
+- T6: Difficulty is a bounded deterministic estimate with Unknown when unsupported; original scene, artifact access, and 1–3 short return highlights communicate actual results. Check: core and browser acceptance.
+
+| ID | Result | Owner | Prerequisite | Check | State |
+| --- | --- | --- | --- | --- | --- |
+| TRUST-01 | Conservative adapter evidence, outcome and empty-run settlement | adapters / core/game | Existing foundation | T1, T2 | Batch verified; integration pending |
+| TRUST-02 | Explicit resume association and safe derived-state rebuilding | core / storage / runtime | TRUST-01 contracts | T2, T5 | In progress |
+| LIVE-01 | Continuous multi-Quest world, durable return identity and clock projection | runtime / renderer | TRUST-02 | T4, T5 | Pending |
+| EXPERIENCE-01 | Minimal difficulty, artifact access and scoped world feedback | core / renderer | LIVE-01 | T6 | Pending |
+| ACCEPT-01 | Real engineering/non-code, negative paths, browser, restart and independent review | Integration | All preceding | T1–T6 | Pending |
+
+## Current repair history
+
+- TRUST-F01 at `57ca8f8`: empty lifecycle yielded 1 XP; `echo test` plus failed file change yielded Verified/32 XP/one loot; pass followed by failed validation yielded Verified/36 XP/one loot. Root causes: keyword classification, unconditional durable artifacts, any historical pass, unconditional unverified bonus. No repairs attempted before this workstream.
+- LIVE-F01 at `57ca8f8`: no automatic snapshot refresh; live refresh suppresses return; first-array task selection; no seen-return cursor or integrated time advance. Existing passing tests do not cover these user paths.
+- TRUST-F02 independent review: version/config-only tool modes could verify; pending/unknown retries could reuse an old pass or erase failure. Added mode exclusions and per-target unresolved-attempt tracking. The initial 71-test pass did not cover these cases; new regressions are required before commit.
+
+## Historical foundation records
 
 ## Outcome
 
@@ -68,4 +95,4 @@ The v0.1 acceptance gate is complete: 62/62 automated tests pass, the real read-
 
 ## Exact next action
 
-Begin a separately scoped v0.2 product goal only after deciding which next user-visible capability has priority.
+Follow the current acceptance gate and `.sakura/STATE.md`; the earlier v0.2 handoff is withdrawn.

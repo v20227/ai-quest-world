@@ -1,11 +1,16 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import { realpath, stat } from "node:fs/promises";
+import { relative, resolve, isAbsolute } from "node:path";
+import { pathToFileURL } from "node:url";
+import { createHash } from "node:crypto";
+import { identifyValidation, validationMeasurements } from "./validation-command.mjs";
 
 import { createCapabilities } from "../../packages/uarp/capabilities.mjs";
 import { assertRuntimeObserver } from "../../packages/adapter-core/contracts.mjs";
 
 export const CODEX_CLI_ADAPTER_ID = "codex-cli";
-export const CODEX_CLI_ADAPTER_VERSION = "0.1.0";
+export const CODEX_CLI_ADAPTER_VERSION = "0.1.1";
 
 const PRIVACY = Object.freeze({
   content_included: false,
@@ -34,10 +39,12 @@ export class CodexCliHarnessAdapter {
   #running = false;
   #stopRequested = false;
   #outputSequence = 0;
-  #eventSequence = 0;
   #lastTimestamp = 0;
   #hadTurnFailure = false;
   #threadId = null;
+  #artifactPaths;
+  #seenTokens = new Set();
+  #pendingArtifacts = new Map();
 
   /**
    * @param {{
@@ -53,6 +60,7 @@ export class CodexCliHarnessAdapter {
    *   ephemeral?: boolean,
    *   clock?: () => string,
    *   spawnProcess?: typeof spawn
+   *   artifactPaths?: boolean
    * }} options
    */
   constructor({
@@ -67,7 +75,8 @@ export class CodexCliHarnessAdapter {
     extraArgs = [],
     ephemeral = true,
     clock = () => new Date().toISOString(),
-    spawnProcess = spawn
+    spawnProcess = spawn,
+    artifactPaths = false
   } = {}) {
     assertNonEmptyString(executable, "executable");
     assertNonEmptyString(cwd, "cwd");
@@ -107,6 +116,8 @@ export class CodexCliHarnessAdapter {
     this.#ephemeral = ephemeral;
     this.#clock = clock;
     this.#spawnProcess = spawnProcess;
+    if (typeof artifactPaths !== "boolean") throw new TypeError("artifactPaths must be boolean");
+    this.#artifactPaths = artifactPaths;
   }
 
   /** @returns {Promise<boolean>} */
@@ -145,7 +156,7 @@ export class CodexCliHarnessAdapter {
         resource_reads: false,
         resource_changes: true,
         validation: true,
-        artifacts: true,
+        artifacts: this.#artifactPaths,
         errors: true,
         usage_tokens: true,
         usage_cost: false,
@@ -156,7 +167,7 @@ export class CodexCliHarnessAdapter {
         task_text: false,
         tool_arguments: false,
         resource_paths: false,
-        artifact_paths: false,
+        artifact_paths: this.#artifactPaths,
         output_summary: false
       }
     });
@@ -178,10 +189,11 @@ export class CodexCliHarnessAdapter {
     this.#running = true;
     this.#stopRequested = false;
     this.#outputSequence = 0;
-    this.#eventSequence = 0;
     this.#lastTimestamp = 0;
     this.#hadTurnFailure = false;
     this.#threadId = null;
+    this.#seenTokens.clear();
+    this.#pendingArtifacts.clear();
 
     try {
       await this.#emit(observer, "run.started", "run.started", {
@@ -209,6 +221,7 @@ export class CodexCliHarnessAdapter {
         return;
       }
       this.#child = child;
+      child.stderr?.resume();
 
       const lineReader = createInterface({ input: child.stdout });
       const outputPromise = this.#consumeOutput(lineReader, observer);
@@ -309,11 +322,11 @@ export class CodexCliHarnessAdapter {
 
     if (itemType === "command_execution") {
       const success = phase === "completed" ? inferSuccess(item) : undefined;
-      const validationKind = inferValidationKind(item.command);
+      const validation = await identifyValidation(item.command, this.#cwd);
       const attributes = {
         tool_kind: "shell",
         tool_name: "shell",
-        ...optionalAttribute("category_hint", inferCategory(item.command)),
+        category_hint: validation === null ? "other" : "validation",
         ...optionalAttribute("exit_code", safeInteger(item.exit_code)),
         ...optionalAttribute("success", success)
       };
@@ -324,22 +337,29 @@ export class CodexCliHarnessAdapter {
         attributes,
         phase === "started" ? "started" : statusForSuccess(success)
       );
-      if (validationKind !== undefined) {
+      if (validation !== null) {
         if (phase === "started") {
           await this.#emit(observer, `validation-started-${itemId}`, "validation.started", {
-            kind: validationKind
+            ...validation
           }, "started");
         } else {
+          const measurements = validationMeasurements(item.aggregated_output);
+          const checked = Number.isSafeInteger(item.exit_code)
+            ? item.exit_code !== 0 || success === false || (measurements.failed ?? 0) > 0
+              ? false
+              : validation.kind !== "test" || (measurements.passed ?? 0) > 0 ? true : undefined
+            : undefined;
           await this.#emit(observer, `validation-completed-${itemId}`, "validation.completed", {
-            kind: validationKind
-          }, validationStatusForSuccess(success));
+            ...validation,
+            ...measurements
+          }, validationStatusForSuccess(checked));
         }
       }
       return;
     }
 
-    if (itemType.includes("file_change")) {
-      if (phase === "completed") {
+    if (itemType === "file_change") {
+      if (phase === "completed" && inferSuccess(item) !== false) {
         const changes = Array.isArray(item.changes) && item.changes.length > 0
           ? item.changes
           : [item];
@@ -347,25 +367,15 @@ export class CodexCliHarnessAdapter {
           const normalizedChange = isRecord(change) ? change : {};
           const changeType = inferChangeType(normalizedChange, item);
           const token = `${itemId}-${index}`;
+          const path = normalizedChange.path ?? normalizedChange.new_path ?? item.path;
+          const artifact = this.#artifactPaths ? await this.#resolveArtifact(path) : null;
           await this.#emit(observer, `resource-changed-${token}`, "resource.changed", {
             resource_kind: "file",
-            change_type: changeType
+            change_type: changeType,
+            ...optionalAttribute("extension", normalizeExtension(path) || undefined)
           });
-          if (["created", "modified", "renamed"].includes(changeType)) {
-            const artifactId = `codex:${this.#runId}:artifact:${itemId}:${index}`;
-            await this.#emit(
-              observer,
-              `artifact-${token}`,
-              changeType === "created" ? "artifact.created" : "artifact.updated",
-              {
-                artifact_id: artifactId,
-                kind: inferArtifactKind(normalizedChange.path ?? normalizedChange.new_path ?? item.path),
-                durable: true,
-                relation: changeType === "created" ? "created" : "updated"
-              },
-              undefined,
-              [createArtifactEvidence(this.#runId, itemId, index)]
-            );
+          if (artifact !== null && ["created", "modified", "renamed"].includes(changeType)) {
+            this.#pendingArtifacts.set(artifact.id, { path, changeType });
           }
         }
       }
@@ -416,6 +426,16 @@ export class CodexCliHarnessAdapter {
   }
 
   async #emitTerminal(observer, outcome) {
+    for (const { path, changeType } of this.#pendingArtifacts.values()) {
+      const artifact = await this.#resolveArtifact(path);
+      if (artifact === null) continue;
+      const artifactId = `codex:${this.#runId}:artifact:${artifact.id}`;
+      await this.#emit(observer, `artifact-${artifact.id}`,
+        changeType === "created" ? "artifact.created" : "artifact.updated",
+        { artifact_id: artifactId, kind: inferArtifactKind(path), uri_or_path: artifact.uri,
+          durable: true, relation: changeType === "created" ? "created" : "updated" },
+        undefined, [{ id: artifactId, kind: "artifact", uri: artifact.uri, content_available: false }]);
+    }
     const type = outcome === "completed"
       ? "run.completed"
       : outcome === "cancelled" ? "run.cancelled" : "run.failed";
@@ -429,9 +449,11 @@ export class CodexCliHarnessAdapter {
   }
 
   async #emit(observer, token, type, attributes, status, evidenceRefs) {
+    if (this.#seenTokens.has(token)) return;
+    this.#seenTokens.add(token);
     const event = {
       uarp_version: "0.1",
-      event_id: `codex-cli:${this.#runId}:${token}:${this.#eventSequence++}`,
+      event_id: `codex-cli:${this.#runId}:${token}`,
       timestamp: this.#nextTimestamp(),
       source: {
         adapter_id: CODEX_CLI_ADAPTER_ID,
@@ -451,6 +473,18 @@ export class CodexCliHarnessAdapter {
       ...(status === undefined ? {} : { status })
     };
     await observer.emit(event);
+  }
+
+  async #resolveArtifact(path) {
+    if (typeof path !== "string" || path.length === 0) return null;
+    try {
+      const root = await realpath(this.#cwd);
+      const resolved = await realpath(resolve(root, path));
+      const local = relative(root, resolved);
+      if (isAbsolute(local) || local.startsWith("..") || local.split(/[\\/]/).some(part => part.startsWith(".") || /^(node_modules|credentials|secrets)$/i.test(part)) || /\.(pem|key|p12|sqlite|db)$/i.test(local)) return null;
+      if (!(await stat(resolved)).isFile()) return null;
+      return { id: createHash("sha256").update(resolved).digest("hex"), uri: pathToFileURL(resolved).href };
+    } catch { return null; }
   }
 
   #nextTimestamp() {
@@ -482,6 +516,7 @@ function waitForExit(child) {
 }
 
 function inferSuccess(item) {
+  if (item.status === "failed" || item.status === "error") return false;
   if (typeof item.success === "boolean") {
     return item.success;
   }
@@ -504,36 +539,6 @@ function statusForSuccess(success) {
 
 function validationStatusForSuccess(success) {
   return success === false ? "failed" : success === true ? "succeeded" : "unknown";
-}
-
-function inferValidationKind(command) {
-  if (typeof command !== "string") {
-    return undefined;
-  }
-  if (/\b(test|pytest|vitest|jest|mocha|check)\b/i.test(command)) {
-    return "test";
-  }
-  if (/\b(build|compile|package)\b/i.test(command)) {
-    return "build";
-  }
-  if (/\b(lint|eslint|prettier)\b/i.test(command)) {
-    return "lint";
-  }
-  if (/\b(typecheck|type-check|tsc|mypy)\b/i.test(command)) {
-    return "typecheck";
-  }
-  return undefined;
-}
-
-function inferCategory(command) {
-  const validationKind = inferValidationKind(command);
-  if (validationKind === "build") {
-    return "build";
-  }
-  if (validationKind !== undefined) {
-    return "validation";
-  }
-  return "other";
 }
 
 function inferChangeType(change, item) {
@@ -585,15 +590,6 @@ function normalizeExtension(value) {
     return "";
   }
   return value.toLowerCase().split(/[\\/.]/).pop() ?? "";
-}
-
-function createArtifactEvidence(runId, itemId, index) {
-  return {
-    id: `codex-evidence:${runId}:${itemId}:${index}`,
-    kind: "artifact",
-    local_ref: `codex://run/${encodeURIComponent(runId)}/item/${encodeURIComponent(itemId)}/change/${index}`,
-    content_available: false
-  };
 }
 
 function optionalAttribute(key, value) {

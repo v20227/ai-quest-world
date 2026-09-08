@@ -72,7 +72,7 @@ export class QuestEngine {
 
     if (!wasTerminal && rootTerminal) {
       quest.outcome_confidence = outcome.confidence;
-      quest.status = statusForTerminal(event.type);
+      quest.status = outcome.confidence === "FAILED" ? "FAILED" : statusForTerminal(event.type);
       quest.phase = "RETURN";
     } else if (!wasTerminal) {
       applyLifecycleProgress(quest, event, semantic);

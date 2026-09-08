@@ -116,7 +116,9 @@ AI_QUEST_WORLD_CODEX_CWD=/path/to/project \
 npm run observe:codex -- "describe the task to observe"
 ```
 
-The command stores the resulting Quest, progression, artifact references, and World State in the configured SQLite database. It keeps reasoning, agent messages, full commands, and file paths outside the UARP event stream; run `npm run dev` separately to view the updated world.
+This entry launches a new read-only Codex CLI task; it does not observe existing desktop conversations. It stores Quest and World State locally. Reasoning, agent messages and full commands are not stored. Unknown validation commands remain ordinary tool operations; a successful process exit is not proof that a test suite ran.
+
+File paths and artifact collection are disabled by default. Set `AI_QUEST_WORLD_ARTIFACT_PATHS=1` only for a project whose output paths you permit to be saved locally. Then successfully observed file changes may become artifact references after the adapter confirms a regular file inside the project still exists at run end. Hidden paths, common credential files and paths outside the project are excluded. File contents are not archived. Run `npm run dev` separately to view the world.
 
 ## Before implementation
 

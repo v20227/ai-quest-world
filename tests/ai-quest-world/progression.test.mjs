@@ -144,8 +144,8 @@ test("repeated validation failures diminish and stop at the per-kind cap", () =>
   const single = buildProjection(buildRepeatedFailureEvents(1)).progression;
   const repeated = buildProjection(buildRepeatedFailureEvents(20)).progression;
 
-  assert.equal(single.outcome_confidence, "UNVERIFIED");
-  assert.equal(repeated.outcome_confidence, "UNVERIFIED");
+  assert.equal(single.outcome_confidence, "FAILED");
+  assert.equal(repeated.outcome_confidence, "FAILED");
   assert.equal(repeated.anti_abuse.repeated_failure_count, 19);
   assert.ok(repeated.anti_abuse.repeated_failure_credit <= repeated.anti_abuse.repeated_failure_credit_cap);
   assert.ok(repeated.anti_abuse.capped_kinds.includes("validation_failure"));

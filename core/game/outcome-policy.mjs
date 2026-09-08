@@ -14,18 +14,31 @@ export function classifyOutcome(inputs, { rootRunId } = {}) {
     throw new TypeError("outcome events must be an array");
   }
 
-  const events = inputs.map(parseRuntimeEvent);
+  const events = [...new Map(inputs.map(parseRuntimeEvent).map(event => [event.event_id, event])).values()]
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp) || a.event_id.localeCompare(b.event_id));
   const resolvedRootRunId = rootRunId ?? findRootRunId(events);
   const validation = createValidationSummary();
   const artifactRefs = new Map();
   let evidenceRefCount = 0;
   let terminalEvent = null;
+  const latestValidations = new Map();
+  let lastChange = "";
 
   for (const event of events) {
-    evidenceRefCount += event.evidence_refs?.length ?? 0;
+    evidenceRefCount += event.evidence_refs?.filter(ref => ref.uri || ref.local_ref).length ?? 0;
+
+    if (event.type === "resource.changed") lastChange = event.timestamp;
 
     if (event.type === "validation.completed") {
       observeValidation(event, validation);
+    }
+    if (event.type === "validation.started" || event.type === "validation.completed") {
+      const key = `${event.attributes.kind}:${event.attributes.target ?? "unknown"}`;
+      const previous = latestValidations.get(key);
+      const summary = createValidationSummary();
+      if (event.type === "validation.completed") observeValidation(event, summary);
+      latestValidations.set(key, { event, passed: summary.success_count > 0,
+        unresolvedFailure: summary.failure_count > 0 || (previous?.unresolvedFailure === true && summary.success_count === 0) });
     }
 
     if (event.type === "artifact.created" || event.type === "artifact.updated") {
@@ -45,7 +58,9 @@ export function classifyOutcome(inputs, { rootRunId } = {}) {
     terminalEvent,
     validation,
     artifactRefs,
-    evidenceRefCount
+    evidenceRefCount,
+    [...latestValidations.values()],
+    lastChange
   );
 
   return {
@@ -76,9 +91,10 @@ function observeValidation(event, summary) {
   const attributes = event.attributes;
   const failed = event.status === "failed" || (attributes.failed ?? 0) > 0 || (attributes.blockers ?? 0) > 0;
   const succeeded = !failed && (
+    !["unknown", "running", "started", "cancelled"].includes(event.status) && (
     event.status === "succeeded" ||
-    event.status === "completed" ||
     ((attributes.failed ?? 0) === 0 && (attributes.blockers ?? 0) === 0 && (attributes.passed ?? 0) > 0)
+    )
   );
 
   summary.attempted = true;
@@ -109,7 +125,7 @@ function createArtifactReference(event) {
     evidence_refs: event.evidence_refs === undefined ? [] : event.evidence_refs.map(cloneJson),
     has_reference: Boolean(
       attributes.uri_or_path ||
-      (event.evidence_refs !== undefined && event.evidence_refs.length > 0)
+      event.evidence_refs?.some(ref => ref.uri || ref.local_ref)
     )
   };
 }
@@ -138,7 +154,7 @@ function mergeArtifactReference(previous, current) {
   return merged;
 }
 
-function classifyTerminalConfidence(terminalEvent, validation, artifactRefs, evidenceRefCount) {
+function classifyTerminalConfidence(terminalEvent, validation, artifactRefs, evidenceRefCount, latestValidations, lastChange) {
   if (terminalEvent === null) {
     return null;
   }
@@ -152,7 +168,10 @@ function classifyTerminalConfidence(terminalEvent, validation, artifactRefs, evi
     return null;
   }
 
-  const hasSuccessfulValidation = validation.success_count > 0;
+  const hasFailure = latestValidations.some(result => result.unresolvedFailure);
+  if (hasFailure) return "FAILED";
+  const hasSuccessfulValidation = latestValidations.length > 0
+    && latestValidations.every(result => result.passed && result.event.timestamp >= lastChange);
   const hasDurableArtifact = [...artifactRefs.values()].some(
     (artifact) => artifact.durable === true && artifact.has_reference === true
   );

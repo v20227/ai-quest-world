@@ -6,6 +6,8 @@ Build AI Quest World v0.1 as a local-first, read-only, offline-capable observabi
 
 ## Delivery targets
 
+Current gate: reopen G4–G8 for TRUST-01 → TRUST-02 → LIVE-01 → EXPERIENCE-01 → ACCEPT-01 in `CURRENT_WORKSTREAM.md`. Historical completion statements below describe earlier fixture coverage, not current product readiness. v0.2 remains deferred.
+
 - G0: Repository and GitHub collaboration baseline — complete.
 - G1: UARP, Adapter Core, simulated Harness, and Observer foundation — complete.
 - G2: Local SQLite event persistence and restart-safe replay — complete.

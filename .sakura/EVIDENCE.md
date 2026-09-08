@@ -1,5 +1,13 @@
 # Evidence
 
+## TRUST-01 checkpoint
+
+- Tested source: the TRUST-01 release event commit on `codex/v01-trusted-loop`.
+- `node --test --test-reporter=dot tests/ai-quest-world/*.test.mjs`: 72 tests passed; `git diff --check` passed.
+- Adversarial regressions cover ordinary and configuration-only commands, empty lifecycle, missing/failed/hidden/out-of-root artifacts, stable duplicate file identity, zero-test output, npm script contents, later failed/unknown/pending validation, independent targets and changes after checks.
+- Independent review returned TRUST-F02; its two reproduced failures were repaired and added to the executed regression set. No real harness or browser acceptance is claimed by this checkpoint.
+- Old derived-world correction and resume association remain TRUST-02; do not integrate this checkpoint as completed v0.1.
+
 ## Repository baseline
 
 - The supplied development pack passed SHA-256 verification and `unzip -t` integrity checks before extraction.
@@ -98,7 +106,7 @@
 
 ## Remaining verification
 
-- No v0.1 acceptance checks remain. Further work should begin as a separately scoped v0.2 goal.
+- Earlier G8 closure is invalidated by TRUST-F01 and LIVE-F01. T1–T6 in `CURRENT_WORKSTREAM.md` require current evidence; historical suite results do not prove these conditions.
 
 ## Version ledger repair
 

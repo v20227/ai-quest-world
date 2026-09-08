@@ -276,9 +276,8 @@ function interpretValidation(event, state) {
     );
   }
 
-  const succeeded = event.status === "succeeded" ||
-    event.status === "completed" ||
-    ((attributes.failed ?? 0) === 0 && (attributes.blockers ?? 0) === 0 && (attributes.passed ?? 0) > 0);
+  const succeeded = !["unknown", "running", "started", "cancelled"].includes(event.status) && (event.status === "succeeded" ||
+    ((attributes.failed ?? 0) === 0 && (attributes.blockers ?? 0) === 0 && (attributes.passed ?? 0) > 0));
   if (!succeeded) {
     return null;
   }
