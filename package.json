@@ -1,0 +1,11 @@
+{
+  "name": "ai-quest-world",
+  "private": true,
+  "scripts": {
+    "test": "npm run test:phase1",
+    "test:phase1": "node --test tests/ai-quest-world/phase1.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
