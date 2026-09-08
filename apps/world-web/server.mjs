@@ -4,10 +4,8 @@ import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createSimulatedRunSequence } from "../../adapters/first-harness/simulated-adapter.mjs";
-import { calculateProgression } from "../../core/game/progression-policy.mjs";
-import { QuestEngine } from "../../core/game/quest-engine.mjs";
-import { analyzeRuntimeEvents } from "../../core/semantic/semantic-engine.mjs";
-import { WorldStateEngine } from "../../core/world/world-state-engine.mjs";
+import { projectWorld } from "./project-world.mjs";
+import { withGameplay } from "./gameplay-snapshot.mjs";
 import { PersistentWorldRuntime } from "./world-runtime.mjs";
 import { isLocalRequest, readArtifact } from "./artifact-access.mjs";
 
@@ -18,6 +16,7 @@ const PUBLIC_FILES = new Map([
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
   ["/guild-desktop.css", ["guild-desktop.css", "text/css; charset=utf-8"]],
   ["/app.mjs", ["app.mjs", "text/javascript; charset=utf-8"]],
+  ["/expedition-view.mjs", ["expedition-view.mjs", "text/javascript; charset=utf-8"]],
   ["/view-state.mjs", ["view-state.mjs", "text/javascript; charset=utf-8"]],
   ["/guild-scene.mjs", ["guild-scene.mjs", "text/javascript; charset=utf-8"]],
   ["/scene-assets.mjs", ["scene-assets.mjs", "text/javascript; charset=utf-8"]],
@@ -27,7 +26,7 @@ const PUBLIC_FILES = new Map([
   ["/scene-motion.mjs", ["scene-motion.mjs", "text/javascript; charset=utf-8"]],
   ["/scene-frames.mjs", ["scene-frames.mjs", "text/javascript; charset=utf-8"]],
   ["/scene-objects.mjs", ["scene-objects.mjs", "text/javascript; charset=utf-8"]],
-  ["/workshop-display.mjs", ["workshop-display.mjs", "text/javascript; charset=utf-8"]],
+  ["/workshop-display.mjs", ["workshop-display.mjs", "text/javascript; charset=utf-8"]]
 ]);
 
 const ASSET_DIRECTORY = resolve(APP_DIRECTORY, "../../assets");
@@ -62,27 +61,8 @@ export function buildDemoSnapshot({ mode = "canonical" } = {}) {
       "run.completed"
     ].includes(event.type))
     : fullEvents;
-  const semantic = analyzeRuntimeEvents(events);
-  const questEngine = new QuestEngine();
-  questEngine.process(events, semantic.records);
-  const quests = questEngine.getQuests();
-  const progressions = quests.map((quest) => calculateProgression(
-    quest,
-    semantic.records.filter((record) => record.root_run_id === quest.root_run_id)
-  ));
-  const worldEngine = new WorldStateEngine();
-  for (const event of events) {
-    worldEngine.ingest(event);
-  }
-  for (const progression of progressions) {
-    worldEngine.applyProgression(progression);
-  }
-
-  return {
-    world: worldEngine.getState(),
-    quests,
-    progressions
-  };
+  const { world, quests, progressions } = projectWorld(events);
+  return { world, quests, progressions };
 }
 
 /** @param {{runtime?: PersistentWorldRuntime|null}=} options @returns {import("node:http").Server} */
@@ -157,7 +137,7 @@ async function handleRequest(request, response, runtime, artifactRoot) {
     }
     const snapshot = buildDemoSnapshot({ mode });
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-    response.end(JSON.stringify(snapshot));
+    response.end(JSON.stringify(withGameplay(snapshot)));
     return;
   }
 
@@ -168,7 +148,7 @@ async function handleRequest(request, response, runtime, artifactRoot) {
       return;
     }
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-    response.end(JSON.stringify({ ...runtime.getSnapshot({ at: new Date().toISOString() }), display_namespace: runtime.getDisplayNamespace(), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
+    response.end(JSON.stringify({ ...withGameplay(runtime.getSnapshot({ at: new Date().toISOString() })), display_namespace: runtime.getDisplayNamespace(), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
     return;
   }
 

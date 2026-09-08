@@ -11,6 +11,7 @@ import {
 } from "./quest-types.mjs";
 import { classifyOutcome } from "./outcome-policy.mjs";
 import { createDifficultyBasis, estimateDifficulty, updateDifficultyBasis } from "./difficulty-policy.mjs";
+import { buildExpedition } from "./expedition-policy.mjs";
 
 /**
  * Deterministic Quest and Run-to-Quest state machine.
@@ -103,6 +104,7 @@ export class QuestEngine {
     quest.artifact_refs = outcome.artifact_refs;
 
     if (!wasTerminal && rootTerminal) {
+      state.terminalEventIds.add(event.event_id);
       quest.outcome_confidence = outcome.confidence;
       quest.status = outcome.confidence === "FAILED" ? "FAILED" : statusForTerminal(event.type);
       quest.phase = "RETURN";
@@ -112,6 +114,7 @@ export class QuestEngine {
     }
 
     quest.updated_at = event.timestamp;
+    quest.expedition = buildExpedition(quest, state.events, [...this.#semanticHistory.values()], state.terminalEventIds);
     if (!wasTerminal && rootTerminal) {
       const { settlement_snapshot, ...settlement } = quest;
       quest.settlement_snapshot = cloneJson(settlement);
@@ -217,7 +220,7 @@ export class QuestEngine {
       updated_at: event.timestamp
     };
     validateQuest(quest);
-    state = { quest, events: [], driver: rootRunId, difficultyBasis: createDifficultyBasis() };
+    state = { quest, events: [], driver: rootRunId, terminalEventIds: new Set(), difficultyBasis: createDifficultyBasis() };
     this.#states.set(rootRunId, state);
     this.#runToQuest.set(rootRunId, quest.quest_id);
     return state;

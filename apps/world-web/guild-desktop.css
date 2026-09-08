@@ -144,7 +144,7 @@ body[data-theme] {
 .bottom-nav { position:relative; inset:auto; padding:5px; gap:28px; background:linear-gradient(var(--panel),var(--night)); }
 .nav-item { display:flex; flex:none; gap:8px; padding:5px 14px; }
 .context-shell { position:fixed; left:auto; right:18px; top:88px; bottom:18px; width:min(450px,calc(100vw - 36px)); max-height:none; transform:translateX(calc(100% + 36px)); }
-.context-shell.is-open { transform:none; }
+.context-shell.is-open { transform:none; z-index:26; }
 .workshop-display,.asset-preview { margin:20px 9%; }
 .desktop-composition .quest-board { display:flex; flex-direction:column; overflow:hidden; }
 .quest-board > .board-ribbon { flex:none; }

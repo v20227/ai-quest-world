@@ -33,7 +33,7 @@ export function classifyOutcome(inputs, { rootRunId } = {}) {
       observeValidation(event, validation);
     }
     if (event.type === "validation.started" || event.type === "validation.completed") {
-      const key = `${event.attributes.kind}:${event.attributes.target ?? "unknown"}`;
+      const key = validationIdentity(event);
       const previous = latestValidations.get(key);
       const summary = createValidationSummary();
       if (event.type === "validation.completed") observeValidation(event, summary);
@@ -201,3 +201,4 @@ function cloneJson(value) {
 }
 
 export { OUTCOME_CONFIDENCES };
+import { validationIdentity } from "./validation-identity.mjs";

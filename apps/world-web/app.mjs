@@ -1,6 +1,7 @@
 import { currentQuest, recentQuests, allArtifacts, artifactKey, unseenReturns } from "./view-state.mjs";
 import { renderGuildScene, displayLabel, returnHighlightLabel } from "./guild-scene.mjs";
 import { createPixelComposition } from "./pixel-composition.mjs";
+import { renderExpedition, renderSettlement, renderGoals } from "./expedition-view.mjs";
 
 const refs = {
   body: document.body,
@@ -352,6 +353,7 @@ function renderGatePanel(snapshot) {
   const { world, quests } = snapshot;
   return `
     <p class="panel-lede">传送门连接本地工具与这个小世界。它只负责观测，不会反向控制工具。</p>
+    ${renderGoals(snapshot, "gate")}
     <div class="insight-card">
       <div class="evidence-head"><h3 class="evidence-title">${labelize(world.gate.state)}</h3><span class="confidence-badge verified">只读</span></div>
       <div class="detail-line"><span>进行中的远征</span><strong>${world.active_run_ids.length}</strong></div>
@@ -374,6 +376,7 @@ function renderGuildPanel(snapshot) {
   const { world, quests } = snapshot;
   return `
     <p class="panel-lede">公会将运行中的工作整理为可读的纪事。一个真实目标可以包含多次子运行，但不会因此重复发放奖励。</p>
+    ${renderGoals(snapshot, "guild")}
     <div class="insight-card">
       <div class="evidence-head"><h3 class="evidence-title">${labelize(world.guild.state)}</h3><span class="status-badge">${world.guild.qualifying_quest_count} 项达标任务</span></div>
       <div class="detail-line"><span>已记录的任务</span><strong>${quests.length}</strong></div>
@@ -394,6 +397,7 @@ function renderBuildingPanel(snapshot, buildingName) {
     : ["research", "plan", "document"].includes(artifact.kind));
   return `
     <p class="panel-lede">${buildingName === "workshop" ? "在这里，把工作中的发现付诸构建、测试与修复。" : "在这里，收藏问题、计划，以及让下一步更清晰的证据。"}</p>
+    ${renderGoals(snapshot, buildingName)}
     <div class="insight-card building-head">
       <span class="building-mini-icon ${buildingName}" aria-hidden="true">${buildingName === "workshop" ? "✣" : "⌘"}</span>
       <div><h3 class="evidence-title">${labelize(building.state)}</h3><p class="artifact-meta">${building.unlocked_at === null ? "此领域积累可信工作后解锁。" : `解锁于 ${formatTime(building.unlocked_at)}`}</p></div>
@@ -431,6 +435,8 @@ function renderQuestPanel(snapshot) {
       <div class="detail-line"><span>关联运行</span><strong>${quest.run_ids.length}</strong></div>
       <div class="detail-line"><span>已观测到的智能体</span><strong>${quest.agent_ids.length}</strong></div>
     </div>
+    ${renderExpedition(quest)}
+    ${renderSettlement(snapshot, quest.quest_id)}
     <div class="detail-card">
       <div class="evidence-head"><h3 class="evidence-title">工作类型分布</h3><span class="muted-badge">${escapeHtml(labelize(quest.primary_domain))}</span></div>
       ${Object.entries(quest.activity_mix).filter(([, value]) => value > 0).map(([domain, value]) => mixRow(domain, value)).join("") || emptyMarkup("尚未解析到有意义的工作活动。")}
@@ -504,6 +510,7 @@ function renderChroniclePanel(snapshot) {
   ];
   return `
     <p class="panel-lede">纪事收藏有意义的工作节点，而不是对话逐字稿。技术细节可在任务详情中查看。</p>
+    ${renderGoals(snapshot, "chronicle")}
     <div class="detail-card">${entries.length === 0 ? emptyMarkup("纪事正等待第一次有意义的归来。") : entries.join("")}</div>
   `;
 }

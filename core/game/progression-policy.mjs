@@ -56,6 +56,25 @@ export const OUTCOME_BONUSES = Object.freeze({
 export const DOMAIN_PROGRESS_CAP = 12;
 export const VALIDATION_FAILURE_CREDIT_CAP = SEMANTIC_XP_CAPS.validation_failure;
 
+export function describeProgression(input) {
+  const progression = validateProgressionSnapshot(input);
+  return {
+    quest_id: progression.quest_id,
+    resolution: progression.resolution,
+    outcome_confidence: progression.outcome_confidence,
+    outcome_multiplier: progression.resolution === "RESOLVED" ? OUTCOME_MULTIPLIERS[progression.outcome_confidence] : 0,
+    activity_xp: progression.semantic_credit.activity_xp,
+    outcome_bonus: progression.semantic_credit.outcome_bonus,
+    total_xp: progression.skill_xp,
+    contributions: Object.entries(progression.semantic_credit.by_kind).filter(([, xp]) => xp > 0).map(([kind, xp]) => ({ kind, xp })),
+    capped_kinds: [...progression.anti_abuse.capped_kinds],
+    domain_progress: { ...progression.domain_progress },
+    domain_progress_cap: DOMAIN_PROGRESS_CAP,
+    credited_artifact_ids: progression.loot_refs.map(artifact => artifact.artifact_id),
+    settled_at: progression.resolution === "RESOLVED" ? progression.quest_snapshot.updated_at : null
+  };
+}
+
 const DOMAIN_CREDIT_CAP = 20;
 
 /**

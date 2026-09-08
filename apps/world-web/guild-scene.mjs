@@ -121,8 +121,10 @@ function renderQuestIllustration(snapshot, selectedQuestId, root) {
   const phases = root.getElementById("board-phases");
   if (!phases) return;
   const current = quest?.phase ?? null;
-  if (phases.dataset.phase === (current ?? "empty")) return;
-  phases.dataset.phase = current ?? "empty";
+  const observed = new Set(quest?.expedition?.observed_phases ?? []);
+  const phaseKey = JSON.stringify([quest?.quest_id, current, [...observed]]);
+  if (phases.dataset.phase === phaseKey) return;
+  phases.dataset.phase = phaseKey;
   const slots = [
     [current === "DEPART" ? "DEPART" : "EXPLORE", 0],
     ["PLAN", 1], ["ACT", 2], ["VALIDATE", 3], ["RECOVER", 4],
@@ -131,9 +133,9 @@ function renderQuestIllustration(snapshot, selectedQuestId, root) {
   phases.replaceChildren(...slots.map(([phase, iconIndex]) => {
     const stamp = root.createElement("span"); stamp.className = "phase-stamp";
     const title = root.createElement("span"); title.textContent = label(phase);
-    const state = root.createElement("small"); state.textContent = current === phase ? "当前" : "—";
+    const state = root.createElement("small"); state.textContent = current === phase ? "当前" : observed.has(phase) ? "已观测" : "—";
     if (current === phase) stamp.setAttribute("aria-current", "step");
-    stamp.title = current === phase ? `当前观测：${label(phase)}` : `${label(phase)}，不表示已发生或已完成`;
+    stamp.title = current === phase ? `当前观测：${label(phase)}` : observed.has(phase) ? `${label(phase)}，曾观测到此阶段，不代表任务完成` : `${label(phase)}，尚未观测到`;
     stamp.append(pixelIcon(root, iconIndex), title, state);
     return stamp;
   }));
