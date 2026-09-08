@@ -1,4 +1,5 @@
 import { currentQuest, recentQuests, allArtifacts, artifactKey, unseenReturns } from "./view-state.mjs";
+import { renderGuildScene } from "./guild-scene.mjs";
 
 const refs = {
   body: document.body,
@@ -39,7 +40,8 @@ const ui = {
   returnTimer: null,
   panelMarkup: null,
   returnFocus: null,
-  artifactPreview: null
+  artifactPreview: null,
+  panelFocus: null
 };
 
 const BUILDING_PANELS = new Set(["gate", "guild", "workshop", "library", "camp", "chronicle", "settings", "quest", "artifact"]);
@@ -98,12 +100,12 @@ function bindEvents() {
       return;
     }
 
-    if (event.target.closest("#theme-toggle") !== null) {
+    if (event.target.closest("#theme-toggle, #settings-theme") !== null) {
       toggleTheme();
       return;
     }
 
-    if (event.target.closest("#motion-toggle") !== null) {
+    if (event.target.closest("#motion-toggle, #settings-motion") !== null) {
       toggleMotion();
       return;
     }
@@ -114,9 +116,7 @@ function bindEvents() {
     }
 
     if (event.target.closest("#close-panel") !== null) {
-      refs.contextShell.classList.remove("is-open");
-      syncPanelAccess();
-      refs.reloadButton.focus({ preventScroll: true });
+      closePanel();
       return;
     }
 
@@ -133,8 +133,7 @@ function bindEvents() {
       if (!refs.returnOverlay.classList.contains("is-hidden")) {
         hideReturnOverlay();
       } else {
-        refs.contextShell.classList.remove("is-open");
-        syncPanelAccess();
+        closePanel();
       }
     }
   });
@@ -186,6 +185,7 @@ async function loadSnapshot(mode = ui.mode, { showReturn = true, silent = false 
 }
 
 function renderWorld(snapshot) {
+  renderGuildScene(snapshot);
   const { world, quests } = snapshot;
   const quest = currentQuest(quests) ?? null;
   refs.hudQuestTitle.textContent = quest?.title ?? "Waiting for a run...";
@@ -220,6 +220,8 @@ function renderWorld(snapshot) {
 }
 
 function selectPanel(panel, { keepMobileOpen = true } = {}) {
+  const opening = keepMobileOpen && !refs.contextShell.classList.contains("is-open");
+  if (opening) ui.panelFocus = document.activeElement;
   if (!BUILDING_PANELS.has(panel)) {
     panel = "camp";
   }
@@ -247,10 +249,18 @@ function selectPanel(panel, { keepMobileOpen = true } = {}) {
     refs.contextShell.classList.add("is-open");
   }
   syncPanelAccess();
+  if (opening) document.querySelector("#close-panel").focus({ preventScroll: true });
+}
+
+function closePanel() {
+  refs.contextShell.classList.remove("is-open");
+  syncPanelAccess();
+  if (ui.panelFocus?.isConnected) ui.panelFocus.focus({ preventScroll: true });
+  else refs.reloadButton.focus({ preventScroll: true });
 }
 
 function syncPanelAccess() {
-  refs.contextShell.inert = window.matchMedia("(max-width: 620px)").matches && !refs.contextShell.classList.contains("is-open");
+  refs.contextShell.inert = !refs.contextShell.classList.contains("is-open");
 }
 
 function panelDefinition(panel) {

@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { readFile, realpath, stat } from "node:fs/promises";
+import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createSimulatedRunSequence } from "../../adapters/first-harness/simulated-adapter.mjs";
@@ -17,7 +17,17 @@ const PUBLIC_FILES = new Map([
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
   ["/app.mjs", ["app.mjs", "text/javascript; charset=utf-8"]],
-  ["/view-state.mjs", ["view-state.mjs", "text/javascript; charset=utf-8"]]
+  ["/view-state.mjs", ["view-state.mjs", "text/javascript; charset=utf-8"]],
+  ["/guild-scene.mjs", ["guild-scene.mjs", "text/javascript; charset=utf-8"]],
+]);
+
+const ASSET_DIRECTORY = resolve(APP_DIRECTORY, "../../assets");
+const ASSET_CONTENT_TYPES = new Map([
+  [".png", "image/png"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
+  [".webp", "image/webp"],
+  [".svg", "image/svg+xml"]
 ]);
 
 /**
@@ -150,6 +160,54 @@ async function handleRequest(request, response, runtime, artifactRoot) {
     }
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
     response.end(JSON.stringify({ ...runtime.getSnapshot({ at: new Date().toISOString() }), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
+    return;
+  }
+
+  if (requestUrl.pathname.startsWith("/assets/")) {
+    let relativePath;
+    try {
+      relativePath = decodeURIComponent(requestUrl.pathname.slice("/assets/".length));
+    } catch {
+      response.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Invalid asset path");
+      return;
+    }
+    const pathSegments = relativePath.split(/[\\/]+/);
+    if (pathSegments.some((segment) => segment.startsWith("."))) {
+      response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+    const requestedPath = resolve(ASSET_DIRECTORY, relativePath);
+    const requestedExtension = extname(requestedPath).toLowerCase();
+    if (!ASSET_CONTENT_TYPES.has(requestedExtension)) {
+      response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+    let assetRootPath;
+    let assetPath;
+    try {
+      assetRootPath = await realpath(ASSET_DIRECTORY);
+      assetPath = await realpath(requestedPath);
+      if (assetPath !== assetRootPath && !assetPath.startsWith(`${assetRootPath}${sep}`)) {
+        throw new Error("Asset path escaped the configured root");
+      }
+      if (!(await stat(assetPath)).isFile()) {
+        throw new Error("Asset path is not a file");
+      }
+    } catch {
+      response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+    const content = await readFile(assetPath);
+    response.writeHead(200, {
+      "content-type": ASSET_CONTENT_TYPES.get(extname(assetPath).toLowerCase()),
+      "cache-control": "public, max-age=300",
+      "cross-origin-resource-policy": "same-origin"
+    });
+    response.end(content);
     return;
   }
 
