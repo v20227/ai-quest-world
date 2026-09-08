@@ -16,11 +16,15 @@
 
 Exit evidence: `npm test` passes all 8 Phase 1 tests, and every required event reaches the downstream sink as valid, deduplicated UARP data.
 
-## Milestone 2: Local persistence
+## Milestone 2: Local persistence — in progress
 
-1. Normalized event storage.
-2. Semantic, Quest, artifact, and world repositories.
-3. Restart and replay safety.
+Current slice: normalized UARP event storage only.
+
+1. Persist validated event envelopes in local SQLite with a versioned schema.
+2. Preserve stable insertion order, run/agent context, evidence, and privacy metadata.
+3. Make duplicate event IDs idempotent across restart and expose read-only replay queries.
+
+Deferred until this slice is green: semantic, Quest, artifact, world, and settings repositories.
 
 ## Milestone 3: Semantics and game core
 
