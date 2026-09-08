@@ -1,4 +1,5 @@
 import { LocalRuntimeObserver } from "../../observer/runtime-observer.mjs";
+import { assertHarnessAdapter } from "../../packages/adapter-core/contracts.mjs";
 import { calculateProgression } from "../../core/game/progression-policy.mjs";
 import { QuestEngine } from "../../core/game/quest-engine.mjs";
 import { analyzeRuntimeEvents } from "../../core/semantic/semantic-engine.mjs";
@@ -75,6 +76,21 @@ export class PersistentWorldRuntime {
   createObserver() {
     this.#assertOpen();
     return this.#observer;
+  }
+
+  /**
+   * Observe one adapter run through the same durable path used by the Web
+   * endpoint. The runtime coordinates boundaries but does not interpret or
+   * mutate harness state itself.
+   *
+   * @param {import("../../packages/adapter-core/contracts.mjs").HarnessAdapter} adapter
+   * @returns {Promise<ReturnType<PersistentWorldRuntime["getSnapshot"]>>}
+   */
+  async runAdapter(adapter) {
+    this.#assertOpen();
+    assertHarnessAdapter(adapter);
+    await adapter.start(this.#observer);
+    return this.getSnapshot();
   }
 
   /** @returns {{world: Record<string, unknown>, quests: Record<string, unknown>[], progressions: Record<string, unknown>[]}} */

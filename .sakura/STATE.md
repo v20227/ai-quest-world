@@ -1,6 +1,6 @@
 # State
 
-- Current milestone: Milestone 4/G6, Web Pixel World — complete
-- Current item: G7 — first real Harness Adapter
-- Exact next action: Inspect the available local harness surfaces and implement one read-only adapter behind the existing Adapter/Observer boundary, with contract-faithful tests before browser integration.
+- Current milestone: Milestone 5/G7, Codex CLI Adapter — complete
+- Current item: G8 — end-to-end v0.1 acceptance
+- Exact next action: Run the acceptance matrix against the canonical fixture and one real local Codex observation, then verify SQLite restart and browser presentation.
 - Blockers: None. GitHub remote is configured; the main integration path owns commits and pushes.

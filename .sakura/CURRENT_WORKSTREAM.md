@@ -1,8 +1,8 @@
-# Current Workstream: Web World Presentation Boundary
+# Current Workstream: Codex CLI Adapter and v0.1 Acceptance
 
 ## Outcome
 
-Turn the authoritative World State and Quest/progression read models into a world-first local Web scene. The Game Core remains the only writer of building, unlock, activity, and cumulative progression state; the Web layer presents the returned state and never recalculates game outcomes.
+Connect a real local Codex CLI run to the existing local-first world pipeline, then close the v0.1 acceptance gate. The adapter remains a strict source boundary; the Game Core remains the only writer of building, unlock, activity, and cumulative progression state; the Web layer presents returned state and never recalculates game outcomes.
 
 ## Acceptance
 
@@ -43,6 +43,9 @@ Turn the authoritative World State and Quest/progression read models into a worl
 | WORLD-INT-01 | Main-branch integration and restart/scope review | Repository | WORLD-01, WORLD-PERSIST-01, WORLD-READ-01 | W1-W8 | Complete |
 | WORLD-WEB-01 | World Scene, Mini HUD, contextual panels, and Return Overlay | `apps/world-web` | WORLD-INT-01 | G6 presentation slice | Complete |
 | WORLD-WEB-02 | Wire the Web endpoint to SQLite-backed read models and live Observer flow | `apps/world-web` / `storage/sqlite` | WORLD-WEB-01 | G6 live read-model checks | Complete |
+| CODEX-ADAPTER-01 | Codex CLI JSONL adapter with strict metadata-first mapping | `adapters/codex-cli` | WORLD-WEB-02 | adapter contract and privacy tests | Complete |
+| CODEX-RUNTIME-01 | Stream a Codex-shaped run through persistent runtime and World State | `apps/world-web` | CODEX-ADAPTER-01 | persistent end-to-end adapter test | Complete |
+| G8-ACCEPTANCE-01 | Execute the full v0.1 acceptance matrix and release gate | Repository | CODEX-RUNTIME-01 | `npm test` plus real local smoke | Next |
 
 ## Repair history
 
@@ -58,6 +61,8 @@ The persistent World State slice is complete: fresh-state, active/returning Gate
 
 The Web presentation slice is complete: the scene is world-first, desktop uses a contextual side panel, narrow screens use an accessible bottom drawer/navigation, the Return Overlay exposes only bounded World State highlights, and the root page reads SQLite-backed projections. The deterministic fixture remains an explicit visual-verification lens rather than the default world source.
 
+The Codex adapter slice is complete: live public JSONL was checked in an isolated local smoke, source-specific events are normalized at the adapter boundary, malformed streams fail closed, and a Codex-shaped run reaches Verified Quest, artifact loot, and persistent World State without changes to Game Core.
+
 ## Exact next action
 
-Select and implement the first real Harness Adapter behind the existing Adapter/Observer boundary, then feed one real local run into the persistent Web world.
+Run the G8 acceptance matrix, including a real local Codex observation and SQLite restart verification.

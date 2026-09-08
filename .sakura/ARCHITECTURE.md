@@ -11,6 +11,9 @@ packages/adapter-core/
   contracts.mjs
 adapters/first-harness/
   simulated-adapter.mjs
+adapters/codex-cli/
+  codex-cli-adapter.mjs
+  index.mjs
 observer/
   runtime-observer.mjs
   aggregation.mjs
@@ -96,11 +99,13 @@ tests/ai-quest-world/
 - `packages/uarp` owns factual event envelopes, canonical event types, capabilities, evidence references, privacy metadata, and runtime validation.
 - `packages/adapter-core` owns harness-agnostic Adapter and Observer contracts.
 - `adapters/first-harness` owns only deterministic simulation of native harness behavior.
+- `adapters/codex-cli` owns only the public Codex CLI JSONL process boundary; it emits strict, metadata-first UARP facts and never passes reasoning, agent-message text, commands, or paths downstream.
 - `observer` owns validation at ingestion, event identity deduplication, buffering, aggregation, and privacy hooks.
 - `core/semantic` will own work-semantic interpretation after Phase 1.
 - `core/game` will own Quest, outcome, reward, growth, artifact, and world state after Phase 1.
 - `storage/sqlite` will own durable repositories after Phase 1.
 - `apps/world-web` owns presentation after the authoritative state path exists. The root page reads the SQLite-backed read model through `/api/world`; `/api/demo` is an explicit deterministic fixture for visual verification. `world-runtime.mjs` is the local orchestration boundary for Observer events and keeps the browser read-only without duplicating World State, Quest, or progression rules.
+- `apps/world-web/observe-codex.mjs` is the explicit local entry point for one read-only Codex CLI observation; it reuses `PersistentWorldRuntime` and does not add a second game pipeline.
 
 ## Dependency direction
 

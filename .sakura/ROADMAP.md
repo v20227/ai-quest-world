@@ -13,7 +13,7 @@ Build AI Quest World v0.1 as a local-first, read-only, offline-capable observabi
 - G4: Quest lifecycle, outcome/evidence policy, growth, anti-abuse, and artifact references — complete.
 - G5: Persistent World State and building progression — complete.
 - G6: Web pixel world and return/unlock presentation — complete.
-- G7: First real Harness Adapter behind the existing adapter boundary.
+- G7: First real Harness Adapter behind the existing adapter boundary — complete for the Codex CLI read-only slice.
 - G8: End-to-end v0.1 acceptance.
 
 ## Milestone 0: Repository baseline
@@ -76,5 +76,7 @@ G6 exit evidence: `npm test` passes 58/58; the Web contract covers canonical and
 
 ## Milestone 5: Real Harness Adapter and acceptance
 
-1. Select and implement one real adapter after the simulated path is green.
-2. Run the complete v0.1 acceptance scenarios.
+G7 exit evidence: the Codex CLI adapter consumes the public `codex exec --json` JSONL boundary, maps lifecycle/tool/recognized validation/file-change/artifact/usage/error facts without exposing content, and feeds the existing persistent runtime. The adapter contract, privacy, malformed-stream, failure, and Codex-shaped end-to-end tests pass in the 62-test regression suite. An isolated local CLI smoke confirmed the live `file_change.changes[{path,kind}]` shape.
+
+1. G8: Run the complete v0.1 acceptance scenarios against the simulated canonical fixture and a real local Codex observation.
+2. Verify restart, conservative outcomes, artifact evidence, Web presentation, and scope guards as one release gate.
