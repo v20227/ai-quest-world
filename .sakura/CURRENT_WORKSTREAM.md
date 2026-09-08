@@ -39,7 +39,8 @@ Turn normalized runtime events and resolved progression into one restart-safe Wo
 | PROGRESSION-INT-01 | Main-branch integration and scope review | Repository | PROGRESSION-01, ANTIABUSE-01 | E1-E8 | Complete |
 | WORLD-01 | Versioned World State model and deterministic event/progression projection | `core/world` | PROGRESSION-INT-01 | W1-W5, W7 | Complete |
 | WORLD-PERSIST-01 | SQLite World State row and applied-input idempotency store | `storage/sqlite` | WORLD-01 | W6-W7 | Complete |
-| WORLD-INT-01 | Main-branch integration and restart/scope review | Repository | WORLD-01, WORLD-PERSIST-01 | W1-W8 | Complete |
+| WORLD-READ-01 | Durable Quest and progression read models | `storage/sqlite` | QUEST-INT-01, PROGRESSION-INT-01 | W4, W6 | Complete |
+| WORLD-INT-01 | Main-branch integration and restart/scope review | Repository | WORLD-01, WORLD-PERSIST-01, WORLD-READ-01 | W1-W8 | Complete |
 
 ## Repair history
 
@@ -47,12 +48,12 @@ Turn normalized runtime events and resolved progression into one restart-safe Wo
 
 ## Acceptance result
 
-G0-G5 foundation and E1-E8 remain green. W1-W8 pass for the persistent World State slice.
+G0-G5 and E1-E8 remain green. W1-W8 pass for the persistent World State slice.
 
 ## Completion decision
 
-The persistent World State foundation slice is complete: fresh-state, active/returning Gate, credible unlock, negative-evidence, duplicate replay, SQLite restart, and highlight-budget fixtures pass together.
+The persistent World State slice is complete: fresh-state, active/returning Gate, credible unlock, negative-evidence, duplicate replay, SQLite restart, temporary activity decay, milestone hooks, durable read models, and highlight-budget fixtures pass together.
 
 ## Exact next action
 
-Define the next G5 batch for temporary activity decay, milestone hooks, and the smallest durable Quest/progression read model needed by the Web layer.
+Define the smallest world-centric Web presentation slice that reads authoritative World State without creating a second game-state authority.

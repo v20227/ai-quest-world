@@ -162,7 +162,27 @@ function readState(database) {
   } catch (error) {
     throw new SqliteWorldStateStoreError("Stored World State JSON is invalid", error);
   }
-  return cloneJson(validateWorldState(parsed));
+  return cloneJson(validateWorldState(normalizeWorldState(parsed)));
+}
+
+function normalizeWorldState(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+  const initial = createInitialWorldState();
+  const activity = value.activity ?? {};
+  return {
+    ...initial,
+    ...value,
+    activity: {
+      ...initial.activity,
+      ...activity,
+      gate: { ...initial.activity.gate, ...(activity.gate ?? {}) },
+      workshop: { ...initial.activity.workshop, ...(activity.workshop ?? {}) },
+      library: { ...initial.activity.library, ...(activity.library ?? {}) }
+    },
+    milestones: value.milestones ?? []
+  };
 }
 
 function assertNonEmptyString(value, name) {

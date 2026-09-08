@@ -95,7 +95,7 @@ The local runtime uses Node's built-in SQLite and test runner; no third-party de
 npm test
 ```
 
-The test command covers the Phase 1 protocol/adapter/observer suite, the Milestone 2 normalized event persistence suite, the deterministic Semantic Engine suite, the Quest lifecycle/outcome suite, the evidence-bounded progression/anti-abuse suite, and the persistent World State suite.
+The test command covers the Phase 1 protocol/adapter/observer suite, the Milestone 2 normalized event persistence suite, the deterministic Semantic Engine suite, the Quest lifecycle/outcome suite, the evidence-bounded progression/anti-abuse suite, the persistent World State suite, and the Quest/progression read-model suite.
 
 ## Before implementation
 

@@ -3,6 +3,13 @@ import { SEMANTIC_DOMAINS } from "../semantic/semantic-types.mjs";
 
 export const WORLD_STATE_VERSION = "0.1";
 export const INITIAL_WORLD_TIMESTAMP = "1970-01-01T00:00:00.000Z";
+export const ACTIVITY_HALF_LIFE_MS = 5 * 60 * 1000;
+
+export const WORLD_MILESTONE_IDS = Object.freeze([
+  "first_qualifying_completion",
+  "first_artifact",
+  "first_verified_outcome"
+]);
 
 export const GATE_STATES = Object.freeze([
   "DORMANT",
@@ -82,6 +89,11 @@ export function createInitialWorldState() {
         Planning: 0
       }
     },
+    activity: {
+      gate: createActivityState(),
+      workshop: createActivityState(),
+      library: createActivityState()
+    },
     progression_totals: {
       skill_xp: 0,
       domain_progress: createEmptyDomainProgress(),
@@ -92,6 +104,7 @@ export function createInitialWorldState() {
     last_quest_id: null,
     last_return_at: null,
     return_highlights: [],
+    milestones: [],
     updated_at: INITIAL_WORLD_TIMESTAMP
   };
 }
@@ -116,11 +129,13 @@ export function validateWorldState(value, path = "world_state") {
     "Research",
     "Planning"
   ]);
+  validateActivity(world.activity, `${path}.activity`);
   validateProgressionTotals(world.progression_totals, `${path}.progression_totals`);
   validateStringArray(world.active_run_ids, `${path}.active_run_ids`);
   validateNullableString(world.last_quest_id, `${path}.last_quest_id`);
   validateNullableTimestamp(world.last_return_at, `${path}.last_return_at`);
   validateHighlights(world.return_highlights, `${path}.return_highlights`);
+  validateMilestones(world.milestones, `${path}.milestones`);
   assertTimestamp(world.updated_at, `${path}.updated_at`);
   return world;
 }
@@ -164,6 +179,20 @@ function validateProgressionTotals(value, path) {
   assertNonNegativeInteger(totals.artifact_count, `${path}.artifact_count`);
 }
 
+function validateActivity(value, path) {
+  const activity = assertPlainRecord(value, path);
+  for (const building of ["gate", "workshop", "library"]) {
+    const activityState = assertPlainRecord(activity[building], `${path}.${building}`);
+    if (!Number.isSafeInteger(activityState.level) || activityState.level < 0 || activityState.level > 100) {
+      throw new WorldStateValidationError(
+        `${path}.${building}.level`,
+        "must be an integer between 0 and 100"
+      );
+    }
+    validateNullableTimestamp(activityState.last_at, `${path}.${building}.last_at`);
+  }
+}
+
 function validateScores(value, path, domains) {
   const scores = assertPlainRecord(value, path);
   for (const domain of domains) {
@@ -197,6 +226,19 @@ function validateHighlights(value, path) {
       );
     }
     validateNullableString(record.quest_id, `${highlightPath}.quest_id`);
+  });
+}
+
+function validateMilestones(value, path) {
+  if (!Array.isArray(value)) {
+    throw new WorldStateValidationError(path, "must be an array");
+  }
+  value.forEach((milestone, index) => {
+    const milestonePath = `${path}[${index}]`;
+    const record = assertPlainRecord(milestone, milestonePath);
+    assertAllowed(record.milestone_id, `${milestonePath}.milestone_id`, WORLD_MILESTONE_IDS);
+    assertTimestamp(record.unlocked_at, `${milestonePath}.unlocked_at`);
+    validateNullableString(record.quest_id, `${milestonePath}.quest_id`);
   });
 }
 
@@ -259,4 +301,11 @@ function assertTimestamp(value, path) {
 
 function createEmptyDomainProgress() {
   return Object.fromEntries(SEMANTIC_DOMAINS.map((domain) => [domain, 0]));
+}
+
+function createActivityState() {
+  return {
+    level: 0,
+    last_at: null
+  };
 }

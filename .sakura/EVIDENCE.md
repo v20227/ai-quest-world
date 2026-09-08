@@ -60,16 +60,20 @@
 - Real artifact loot required a durable artifact with a path or evidence reference; failed and unverified outcomes produced no fabricated loot.
 - Activity Mix rounding was clamped to a valid non-negative 0-100 range for every semantic and Quest projection.
 
-## G5 World State foundation
+## G5 World State and read-model foundation
 
 - `node --check` passed for the World State model, projector, SQLite repository, and schema migration.
-- The World State suite passed: 7/7 tests, 0 failures.
-- The combined Phase 1, persistence, semantic, Quest, progression, and World State suites passed: 51/51 tests, 0 failures.
+- The World State suite passed: 8/8 tests, 0 failures.
+- The Quest/progression read-model suite passed: 2/2 tests, 0 failures.
+- The combined Phase 1, persistence, semantic, Quest, progression, World State, and read-model suites passed: 54/54 tests, 0 failures.
 - A fresh state contains an active Small Camp, dormant AI Gate, old Quest Guild, and locked Workshop/Library.
 - Root run lifecycle events activate the Gate, track active runs, and leave a returning state after completion.
 - Credible completed progression restores the Guild, unlocks domain-relevant buildings, accumulates bounded totals, and keeps at most three return highlights.
 - Unverified progression records limited totals without unlocking buildings or fabricating artifact state.
 - Duplicate runtime event IDs and resolved Quest progression remain idempotent in memory and across SQLite restart.
+- Temporary Gate/building activity decays at a deterministic half-life while permanent unlocks, milestones, and cumulative progress remain unchanged.
+- First qualifying completion, first real artifact, and first Verified outcome are persisted as unique milestone hooks.
+- Quest and progression projections survive restart, reject stale replacement, and expose a stable read-only repository boundary for the Web layer.
 
 ## Remaining verification
 

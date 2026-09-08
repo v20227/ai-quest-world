@@ -79,6 +79,7 @@ test("runtime lifecycle activates the Gate and leaves it Returning after root co
   assert.equal(returned.gate.state, "RETURNING");
   assert.deepEqual(returned.active_run_ids, []);
   assert.equal(returned.last_return_at, events.at(-1).timestamp);
+  assert.equal(returned.activity.gate.level, 60);
 });
 
 test("credible completed progression restores the Guild and unlocks relevant buildings", () => {
@@ -97,8 +98,31 @@ test("credible completed progression restores the Guild and unlocks relevant bui
   assert.equal(state.progression_totals.qualifying_quest_count, 1);
   assert.equal(state.progression_totals.artifact_count, 1);
   assert.equal(state.last_quest_id, progression.quest_id);
+  assert.equal(state.activity.workshop.level, 85);
+  assert.equal(state.activity.library.level, 85);
+  assert.deepEqual(
+    state.milestones.map((milestone) => milestone.milestone_id),
+    ["first_qualifying_completion", "first_artifact", "first_verified_outcome"]
+  );
   assert.ok(state.return_highlights.length > 0);
   assert.ok(state.return_highlights.length <= 3);
+});
+
+test("activity decays over time without reducing permanent world progress", () => {
+  const { events, progression } = canonicalProjection();
+  const { engine } = projectInMemory(events, progression);
+  const before = engine.getState();
+  const later = new Date(Date.parse(events.at(-1).timestamp) + 5 * 60 * 1000).toISOString();
+
+  const decayed = engine.advanceTo(later);
+  assert.ok(decayed);
+  assert.equal(decayed.activity.gate.level, 30);
+  assert.equal(decayed.activity.workshop.level, 43);
+  assert.equal(decayed.activity.library.level, 43);
+  assert.equal(decayed.workshop.state, before.workshop.state);
+  assert.equal(decayed.library.state, before.library.state);
+  assert.deepEqual(decayed.progression_totals, before.progression_totals);
+  assert.deepEqual(decayed.milestones, before.milestones);
 });
 
 test("unverified progression records limited totals but does not unlock buildings or artifact loot", () => {
