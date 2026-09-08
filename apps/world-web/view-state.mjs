@@ -9,6 +9,12 @@ export function currentQuest(quests) {
 
 export function artifactKey(artifact) { return JSON.stringify([artifact.source_quest_id, artifact.artifact_id]); }
 
+export function artifactName(artifact) {
+  if (artifact.name) return artifact.name;
+  try { return decodeURIComponent(artifact.uri_or_path?.split(/[\\/]/).at(-1) || artifact.artifact_id); }
+  catch { return artifact.artifact_id; }
+}
+
 export function allArtifacts(progressions, quests = []) {
   const rewards = new Set(progressions.flatMap(progression => progression.loot_refs).map(artifactKey));
   const facts = recentQuests(quests).flatMap(quest => quest.artifact_refs
@@ -17,7 +23,7 @@ export function allArtifacts(progressions, quests = []) {
   const artifacts = [...facts, ...[...progressions].sort((a, b) => Date.parse(b.quest_snapshot.updated_at) - Date.parse(a.quest_snapshot.updated_at))
     .flatMap(progression => progression.loot_refs)];
   return [...new Map(artifacts.map(artifact => [artifactKey(artifact), artifact])).values()]
-    .map(artifact => ({ ...artifact, rewarded: rewards.has(artifactKey(artifact)) }));
+    .map(artifact => ({ ...artifact, name: artifactName(artifact), rewarded: rewards.has(artifactKey(artifact)) }));
 }
 
 export function unseenReturns(world, seen, pending = []) {

@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
-import { realpath, stat } from "node:fs/promises";
+import { realpath, stat, open } from "node:fs/promises";
 import { relative, resolve, isAbsolute } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { identifyValidation, validationMeasurements } from "./validation-command.mjs";
+import { hasSqliteHeader, isProtectedArtifactPath } from "../../packages/adapter-core/artifact-privacy.mjs";
 
 import { createCapabilities } from "../../packages/uarp/capabilities.mjs";
 import { assertRuntimeObserver } from "../../packages/adapter-core/contracts.mjs";
@@ -45,6 +46,12 @@ export class CodexCliHarnessAdapter {
   #artifactPaths;
   #seenTokens = new Set();
   #pendingArtifacts = new Map();
+  #input;
+  #lineReader = null;
+  #turnCompleted = false;
+  #turnCount = 0;
+  #resumedFromRunId;
+  #streamPhase = "thread";
 
   /**
    * @param {{
@@ -76,11 +83,14 @@ export class CodexCliHarnessAdapter {
     ephemeral = true,
     clock = () => new Date().toISOString(),
     spawnProcess = spawn,
-    artifactPaths = false
+    artifactPaths = false,
+    input = null,
+    resumedFromRunId
   } = {}) {
     assertNonEmptyString(executable, "executable");
     assertNonEmptyString(cwd, "cwd");
-    assertNonEmptyString(prompt, "prompt");
+    if (input === null) assertNonEmptyString(prompt, "prompt");
+    else if (typeof input[Symbol.asyncIterator] !== "function") throw new TypeError("input must be a readable stream");
     assertNonEmptyString(runId, "runId");
     if (title !== undefined) {
       assertNonEmptyString(title, "title");
@@ -118,10 +128,14 @@ export class CodexCliHarnessAdapter {
     this.#spawnProcess = spawnProcess;
     if (typeof artifactPaths !== "boolean") throw new TypeError("artifactPaths must be boolean");
     this.#artifactPaths = artifactPaths;
+    if (resumedFromRunId !== undefined) assertNonEmptyString(resumedFromRunId, "resumedFromRunId");
+    this.#input = input;
+    this.#resumedFromRunId = resumedFromRunId;
   }
 
   /** @returns {Promise<boolean>} */
   async detect() {
+    if (this.#input !== null) return true;
     return new Promise((resolve) => {
       let probe;
       try {
@@ -194,13 +208,28 @@ export class CodexCliHarnessAdapter {
     this.#threadId = null;
     this.#seenTokens.clear();
     this.#pendingArtifacts.clear();
+    this.#turnCompleted = false;
+    this.#turnCount = 0;
+    this.#streamPhase = "thread";
 
     try {
       await this.#emit(observer, "run.started", "run.started", {
         title: this.#title,
         task_text_available: false,
-        mode: "codex-cli"
+        mode: this.#input === null ? "codex-cli" : "codex-cli-stream",
+        ...optionalAttribute("resumed_from_run_id", this.#resumedFromRunId)
       }, "started");
+
+      if (this.#input !== null) {
+        try {
+          this.#lineReader = createInterface({ input: this.#input });
+          await this.#consumeOutput(this.#lineReader, observer);
+        } catch { await this.#emitRuntimeError(observer, "input-stream"); }
+        const outcome = this.#stopRequested ? "cancelled"
+          : this.#threadId !== null && this.#turnCompleted && !this.#hadTurnFailure ? "completed" : "failed";
+        await this.#emitTerminal(observer, outcome);
+        return;
+      }
 
       const args = ["exec", "--json"];
       if (this.#ephemeral) {
@@ -234,6 +263,7 @@ export class CodexCliHarnessAdapter {
       await this.#emitTerminal(observer, this.#stopRequested ? "cancelled" : result.code === 0 && !this.#hadTurnFailure ? "completed" : "failed");
     } finally {
       this.#child = null;
+      this.#lineReader = null;
       this.#running = false;
     }
   }
@@ -241,6 +271,7 @@ export class CodexCliHarnessAdapter {
   /** Stop the active CLI process without sending it any new instruction. */
   async stop() {
     this.#stopRequested = true;
+    this.#lineReader?.close();
     this.#child?.kill?.("SIGTERM");
   }
 
@@ -283,18 +314,32 @@ export class CodexCliHarnessAdapter {
       await this.#emitRuntimeError(observer, `jsonl-${this.#outputSequence}`);
       return;
     }
+    if (this.#input !== null && !this.#validPassiveMessage(message)) {
+      await this.#emitRuntimeError(observer, `invalid-record-${this.#outputSequence}`); return;
+    }
 
     switch (message.type) {
       case "thread.started":
+        if (this.#threadId !== null && this.#threadId !== message.thread_id) {
+          await this.#emitRuntimeError(observer, "multiple-threads"); return;
+        }
         this.#threadId = typeof message.thread_id === "string" ? message.thread_id : null;
         return;
+      case "turn.started":
+        this.#turnCount += 1;
+        if (this.#turnCount > 1) await this.#emitRuntimeError(observer, "multiple-turns");
+        return;
       case "item.started":
+        if (this.#turnCompleted) { await this.#emitRuntimeError(observer, "post-terminal-item"); return; }
         await this.#handleItem(message.item, "started", observer);
         return;
       case "item.completed":
+        if (this.#turnCompleted) { await this.#emitRuntimeError(observer, "post-terminal-item"); return; }
         await this.#handleItem(message.item, "completed", observer);
         return;
       case "turn.completed":
+        if (this.#turnCompleted) return;
+        this.#turnCompleted = true;
         await this.#handleUsage(message.usage, observer);
         return;
       case "turn.failed":
@@ -319,6 +364,7 @@ export class CodexCliHarnessAdapter {
     const itemId = typeof item.id === "string" && item.id.length > 0
       ? item.id
       : `line-${this.#outputSequence}`;
+    if (itemType === "error") { await this.#emitRuntimeError(observer, `item-${itemId}`); return; }
 
     if (itemType === "command_execution") {
       const success = phase === "completed" ? inferSuccess(item) : undefined;
@@ -359,7 +405,7 @@ export class CodexCliHarnessAdapter {
     }
 
     if (itemType === "file_change") {
-      if (phase === "completed" && inferSuccess(item) !== false) {
+      if (phase === "completed" && inferSuccess(item) === true) {
         const changes = Array.isArray(item.changes) && item.changes.length > 0
           ? item.changes
           : [item];
@@ -396,6 +442,29 @@ export class CodexCliHarnessAdapter {
         phase === "started" ? "started" : statusForSuccess(success)
       );
     }
+  }
+
+  #validPassiveMessage(message) {
+    if (["error", "response.failed"].includes(message.type)) return true;
+    if (message.type === "thread.started") {
+      if (this.#streamPhase !== "thread" || typeof message.thread_id !== "string" || !message.thread_id.trim()) return false;
+      this.#streamPhase = "turn"; return true;
+    }
+    if (message.type === "turn.started") {
+      if (this.#streamPhase !== "turn") return false;
+      this.#streamPhase = "active"; return true;
+    }
+    if (["turn.completed", "turn.failed"].includes(message.type)) {
+      if (this.#streamPhase !== "active") return false;
+      this.#streamPhase = "ended"; return true;
+    }
+    if (!["item.started", "item.updated", "item.completed"].includes(message.type) || this.#streamPhase !== "active") return false;
+    const item = message.item;
+    if (!isRecord(item) || typeof item.id !== "string" || !item.id.trim() || !["agent_message", "reasoning", "command_execution", "file_change", "mcp_tool_call", "web_search", "web_search_call", "todo_list", "error"].includes(item.type)) return false;
+    if (item.type === "command_execution" && (typeof item.command !== "string" || !item.command.trim())) return false;
+    if (item.type === "file_change" && (!Array.isArray(item.changes) || item.changes.some(change => !isRecord(change) || typeof change.path !== "string" || !change.path.trim() || typeof change.kind !== "string"))) return false;
+    if (message.type === "item.completed" && item.type === "file_change" && !["completed", "succeeded", "failed", "error"].includes(item.status)) return false;
+    return true;
   }
 
   async #handleUsage(usage, observer) {
@@ -481,8 +550,13 @@ export class CodexCliHarnessAdapter {
       const root = await realpath(this.#cwd);
       const resolved = await realpath(resolve(root, path));
       const local = relative(root, resolved);
-      if (isAbsolute(local) || local.startsWith("..") || local.split(/[\\/]/).some(part => part.startsWith(".") || /^(node_modules|credentials|secrets)$/i.test(part)) || /\.(pem|key|p12|sqlite|db)$/i.test(local)) return null;
+      if (isAbsolute(local) || local.startsWith("..") || isProtectedArtifactPath(local)) return null;
       if (!(await stat(resolved)).isFile()) return null;
+      const handle = await open(resolved, "r");
+      try {
+        const header = Buffer.alloc(16); const { bytesRead } = await handle.read(header, 0, 16, 0);
+        if (hasSqliteHeader(header.subarray(0, bytesRead))) return null;
+      } finally { await handle.close(); }
       return { id: createHash("sha256").update(resolved).digest("hex"), uri: pathToFileURL(resolved).href };
     } catch { return null; }
   }

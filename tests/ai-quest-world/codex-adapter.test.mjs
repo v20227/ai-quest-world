@@ -59,7 +59,7 @@ test("Codex CLI adapter declares honest capabilities and maps public JSONL facts
     { type: "item.completed", item: { id: "item-command", type: "command_execution", status: "completed", exit_code: 0, command: "node --test", aggregated_output: "# tests 1\n# pass 1\n# fail 0" } },
     { type: "item.completed", item: { id: "item-reasoning", type: "reasoning", summary: "private reasoning must not cross the adapter" } },
     { type: "item.completed", item: { id: "item-message", type: "agent_message", text: "visible response is not runtime metadata" } },
-    { type: "item.completed", item: { id: "item-file", type: "file_change", changes: [{ path: "/workspace/src/AuthService.js", kind: "add" }] } },
+    { type: "item.completed", item: { id: "item-file", type: "file_change", status: "completed", changes: [{ path: "/workspace/src/AuthService.js", kind: "add" }] } },
     { type: "turn.completed", usage: { input_tokens: 12, output_tokens: 8, total_tokens: 20 } }
   ];
   const adapter = new CodexCliHarnessAdapter({

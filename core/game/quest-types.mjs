@@ -46,6 +46,7 @@ export function createEmptyActivityMix() {
  * @property {string} status
  * @property {string} phase
  * @property {string|null} outcome_confidence
+ * @property {{estimated: number|null, observed: number|null}} [difficulty]
  * @property {string|null} primary_domain
  * @property {string[]} secondary_domains
  * @property {Record<string, number>} domain_scores
@@ -72,6 +73,18 @@ export function validateQuest(value, path = "quest") {
   assertNonEmptyString(quest.title, `${path}.title`);
   assertAllowed(quest.status, `${path}.status`, QUEST_STATUSES);
   assertAllowed(quest.phase, `${path}.phase`, SEMANTIC_PHASES);
+  if (quest.difficulty !== undefined) {
+    const difficulty = assertPlainRecord(quest.difficulty, `${path}.difficulty`);
+    for (const key of ["estimated", "observed"]) {
+      const level = difficulty[key];
+      if (level !== null && (!Number.isInteger(level) || level < 1 || level > 5)) {
+        throw new QuestValidationError(`${path}.difficulty.${key}`, "must be null or an integer between 1 and 5");
+      }
+    }
+    if (difficulty.observed !== null && !["COMPLETED", "FAILED", "CANCELLED"].includes(quest.status)) {
+      throw new QuestValidationError(`${path}.difficulty.observed`, "requires a terminal Quest");
+    }
+  }
   if (quest.outcome_confidence !== null) {
     assertAllowed(quest.outcome_confidence, `${path}.outcome_confidence`, OUTCOME_CONFIDENCES);
   }

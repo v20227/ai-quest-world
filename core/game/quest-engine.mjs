@@ -10,6 +10,7 @@ import {
   validateQuest
 } from "./quest-types.mjs";
 import { classifyOutcome } from "./outcome-policy.mjs";
+import { createDifficultyBasis, estimateDifficulty, updateDifficultyBasis } from "./difficulty-policy.mjs";
 
 /**
  * Deterministic Quest and Run-to-Quest state machine.
@@ -71,6 +72,7 @@ export class QuestEngine {
       quest.status = "CANDIDATE";
       quest.outcome_confidence = null;
       quest.phase = "DEPART";
+      quest.difficulty.observed = null;
     }
     const rootTerminal = driver && event.context.run_id === state.driver && isTerminalType(event.type);
     const wasTerminal = isTerminalStatus(quest.status);
@@ -92,6 +94,8 @@ export class QuestEngine {
 
     if (!wasTerminal && semantic !== null && !(isTerminalSemantic(semantic) && !rootTerminal)) {
       applySemanticRecord(quest, semantic);
+      updateDifficultyBasis(state.difficultyBasis, semantic);
+      quest.difficulty.estimated = estimateDifficulty(state.difficultyBasis);
     }
 
     const outcome = classifyOutcome(state.events, { rootRunId: state.driver });
@@ -102,6 +106,7 @@ export class QuestEngine {
       quest.outcome_confidence = outcome.confidence;
       quest.status = outcome.confidence === "FAILED" ? "FAILED" : statusForTerminal(event.type);
       quest.phase = "RETURN";
+      quest.difficulty.observed = quest.difficulty.estimated;
     } else if (!wasTerminal) {
       applyLifecycleProgress(quest, event, semantic);
     }
@@ -198,6 +203,7 @@ export class QuestEngine {
       status: "CANDIDATE",
       phase: "DEPART",
       outcome_confidence: null,
+      difficulty: { estimated: null, observed: null },
       primary_domain: null,
       secondary_domains: [],
       domain_scores: domainScores,
@@ -211,7 +217,7 @@ export class QuestEngine {
       updated_at: event.timestamp
     };
     validateQuest(quest);
-    state = { quest, events: [], driver: rootRunId };
+    state = { quest, events: [], driver: rootRunId, difficultyBasis: createDifficultyBasis() };
     this.#states.set(rootRunId, state);
     this.#runToQuest.set(rootRunId, quest.quest_id);
     return state;
