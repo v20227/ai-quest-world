@@ -96,6 +96,7 @@ const FORBIDDEN_GAME_KEYS = new Set([
 /** @param {unknown} value @returns {RuntimeEvent} */
 export function validateRuntimeEvent(value) {
   const event = assertRecord(value, "event");
+  assertNoGameSemantics(event, "event");
 
   if (event.uarp_version !== UARP_VERSION) {
     throw new UarpValidationError(
