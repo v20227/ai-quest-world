@@ -46,6 +46,23 @@ tests/ai-quest-world/
 - `semantic-engine.mjs` consumes validated UARP facts, maintains only interpretation state, and emits deterministic semantic records/snapshots.
 - Semantic Engine state is not authoritative game state and has no dependency on SQLite, Game Core, UI, or a concrete Harness Adapter.
 
+## Quest and outcome module map
+
+```text
+core/game/
+  index.mjs
+  quest-types.mjs
+  quest-engine.mjs
+  outcome-policy.mjs
+tests/ai-quest-world/
+  quest.test.mjs
+```
+
+- `quest-types.mjs` owns the serializable Quest projection and lifecycle vocabulary.
+- `quest-engine.mjs` owns deterministic root-run association, lifecycle transitions, semantic projections, and replay idempotency.
+- `outcome-policy.mjs` classifies terminal confidence from validation and factual artifact/evidence references; native completion alone is never Verified.
+- This slice stores normalized event facts internally for classification but exposes no reward, growth, loot, or World State fields.
+
 ## Ownership
 
 - `packages/uarp` owns factual event envelopes, canonical event types, capabilities, evidence references, privacy metadata, and runtime validation.

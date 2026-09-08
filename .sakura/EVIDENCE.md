@@ -37,6 +37,17 @@
 - Replaying an event ID did not duplicate semantic records or domain scores.
 - Semantic records remained free of reward, Quest, building, and World State mutation fields.
 
+## G4 Quest and outcome foundation
+
+- `node --check` passed for the Quest types, Quest engine, outcome policy, and Game Core entry point.
+- The Quest suite passed: 11/11 tests, 0 failures.
+- The combined Phase 1, persistence, semantic, and Quest suites passed: 37/37 tests, 0 failures.
+- The canonical simulated run produced one completed Quest with child-run membership, validation history, Activity Mix, and a durable artifact reference.
+- Candidate, Active, Validating, Completed, Failed, and Cancelled lifecycle states were verified, including independent root separation and child/retry attachment.
+- Native completion alone remained Unverified; successful validation plus a durable referenced artifact was required for Verified.
+- Artifact updates merged factual references without discarding previously observed durable evidence.
+- Quest projections remained free of reward, loot, growth, and World State mutation fields.
+
 ## Remaining verification
 
-- Semantic Engine, Game Core, Web World, and real Harness integration are intentionally not implemented in this slice.
+- Deterministic growth, rewards, anti-abuse policy, persistent Quest repositories, World State, Web World, and real Harness integration are intentionally not implemented in this slice.

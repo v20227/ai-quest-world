@@ -1,19 +1,20 @@
-# Current Workstream: Deterministic Semantic Engine
+# Current Workstream: Quest Lifecycle and Outcome Evidence
 
 ## Outcome
 
-Turn ordered, validated UARP facts into deterministic semantic records and a six-domain Activity Mix. The engine owns interpretation only: it must not mutate Quest, reward, growth, artifact, World State, renderer, or Harness state.
+Turn a normalized root run plus deterministic semantic records into one authoritative Quest lifecycle with child/retry association, evidence-based outcome confidence, and real artifact references. This slice must not award growth/rewards or mutate World State.
 
 ## Acceptance
 
-- C1: The engine emits a stable semantic timeline for the canonical simulated run: `DEPART → EXPLORE → ACT → VALIDATE → RECOVER → VALIDATE → DELIVER → RETURN`.
-- C2: The engine recognizes exploration, implementation, validation failure/success, recovery, delivery, and return from factual event types and attributes.
-- C3: Six domains are represented: Research, Planning, Engineering, Debugging, Creation, and Automation.
-- C4: Activity Mix uses deterministic semantic impact weights and does not let raw resource/token/tool counts dominate meaningful changes.
-- C5: Parent/child run context contributes to one root semantic timeline while preserving source run and agent identity.
-- C6: Replaying the same `event_id` is idempotent and does not duplicate semantic records or domain scores.
-- C7: Semantic records are deterministic, contain no reward/game-state mutations, and can be consumed without a concrete adapter or UI.
-- C8: Phase 1 and G2 persistence tests remain green without an external AI/API.
+- D1: A qualifying root `run.started` creates one `CANDIDATE` Quest with a deterministic title and root run identity.
+- D2: Meaningful semantic activity promotes the Quest to `ACTIVE`; validation activity uses `VALIDATING`.
+- D3: A root terminal event transitions the Quest to `COMPLETED`, `FAILED`, or `CANCELLED`.
+- D4: Child runs and retry runs attach to the parent Quest and never create an independent Quest completion.
+- D5: Independent root runs create separate Quests; replayed event IDs do not duplicate Quests or change their state.
+- D6: `run.completed` is `VERIFIED` only with successful validation plus a durable real artifact/evidence reference; otherwise it is `SUPPORTED` or `UNVERIFIED` according to available evidence.
+- D7: Failed and cancelled terminal events produce `FAILED` and `CANCELLED` confidence respectively; natural-language/native completion alone is not Verified.
+- D8: Quest records preserve semantic phase/domain mix, run/agent membership, validation summary, artifact references, and deterministic timestamps without reward or World State fields.
+- D9: Phase 1, persistence, and semantic tests remain green without an external AI/API.
 
 ## Work items
 
@@ -31,6 +32,9 @@ Turn ordered, validated UARP facts into deterministic semantic records and a six
 | SEMANTIC-01 | Semantic types, phase state machine, domain weights, and deterministic engine | `core/semantic` | PERSIST-INT-01 | C1-C7 | Complete |
 | SEMANTIC-02 | Canonical semantic timeline, Activity Mix, hierarchy, and replay tests | `tests/ai-quest-world/semantic.test.mjs` | SEMANTIC-01 contract | C1-C8 | Complete |
 | SEMANTIC-INT-01 | Main-branch integration and scope review | Repository | SEMANTIC-01, SEMANTIC-02 | C1-C8 | Complete |
+| QUEST-01 | Quest types, root association, lifecycle, and deterministic projections | `core/game` | SEMANTIC-INT-01 | D1-D5, D8 | Complete |
+| OUTCOME-01 | Outcome/evidence policy and factual artifact references | `core/game` | QUEST-01 | D6-D8 | Complete |
+| QUEST-INT-01 | Main-branch integration and scope review | Repository | QUEST-01, OUTCOME-01 | D1-D9 | Complete |
 
 ## Repair history
 
@@ -38,19 +42,12 @@ Turn ordered, validated UARP facts into deterministic semantic records and a six
 
 ## Acceptance result
 
-- C1 PASS: canonical simulated run emits `DEPART → EXPLORE → ACT → VALIDATE → RECOVER → VALIDATE → DELIVER → RETURN`.
-- C2 PASS: exploration, implementation, validation failure/success, recovery, delivery, and return are recognized from UARP facts.
-- C3 PASS: Research, Planning, Engineering, Debugging, Creation, and Automation are represented.
-- C4 PASS: fixed semantic impact weights and repeated-activity suppression prevent raw counts from dominating Activity Mix.
-- C5 PASS: child events share the root timeline while preserving source run and agent context.
-- C6 PASS: replayed event IDs do not duplicate records or domain scores.
-- C7 PASS: semantic output is deterministic and contains no reward/game-state mutation or concrete adapter/UI dependency.
-- C8 PASS: combined Phase 1, persistence, and semantic suites pass 26/26 without an external AI/API.
+G0-G3 remain green. D1-D9 pass in the Quest/outcome foundation slice; G4 growth, rewards, anti-abuse, and World State work remains.
 
 ## Completion decision
 
-G3 deterministic semantic interpretation is green and ready for the Quest/outcome slice.
+The Quest/outcome foundation slice is complete. The broader G4 milestone remains in progress until deterministic growth, rewards, anti-abuse, and artifact-reference hardening are implemented and verified.
 
 ## Exact next action
 
-Start G4 planning with Candidate Quest lifecycle and outcome/evidence records while keeping Game Core authoritative for progression decisions.
+Define the next G4 batch for evidence-bounded growth, rewards, and anti-abuse rules without mutating World State.

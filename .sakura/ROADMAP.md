@@ -10,7 +10,7 @@ Build AI Quest World v0.1 as a local-first, read-only, offline-capable observabi
 - G1: UARP, Adapter Core, simulated Harness, and Observer foundation — complete.
 - G2: Local SQLite event persistence and restart-safe replay — complete.
 - G3: Deterministic Semantic Engine and work-phase state machine — complete.
-- G4: Quest lifecycle, outcome/evidence policy, growth, anti-abuse, and artifact references.
+- G4: Quest lifecycle, outcome/evidence policy, growth, anti-abuse, and artifact references — in progress.
 - G5: Persistent World State and building progression.
 - G6: Web pixel world and return/unlock presentation.
 - G7: First real Harness Adapter behind the existing adapter boundary.
@@ -54,6 +54,10 @@ Completed slice: deterministic Semantic Engine only. Quest, outcome, rewards, gr
 4. Outcome confidence, evidence policy, rewards, anti-abuse, and world progression.
 
 G3 exit evidence: canonical semantic timeline, bounded impact weights, six-domain Activity Mix, hierarchy preservation, event replay idempotency, and 26/26 combined tests.
+
+G4 current slice complete: Candidate Quest lifecycle, Run-to-Quest association, outcome/evidence classification, and factual artifact references. Growth, rewards, anti-abuse, and World State remain deferred to the next G4 batch.
+
+G4 foundation exit evidence: Quest lifecycle, child/retry association, independent-root separation, replay idempotency, validation/artifact confidence policy, and factual artifact-reference merging are covered by the Quest suite; the combined suite passes 37/37.
 
 ## Milestone 4: Web world
 
