@@ -14,6 +14,7 @@ import { SqliteCollectionStore } from "../../storage/sqlite/collection-store.mjs
 import { SqliteEconomyStore } from "../../storage/sqlite/economy-store.mjs";
 import { milestoneCollectibles } from "../../core/game/collection-rewards.mjs";
 import { workGoldGrants } from "../../core/game/economy-policy.mjs";
+import { startLiveTail } from "./live-tail.mjs";
 
 const APP_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_FILES = new Map([
@@ -128,6 +129,15 @@ export function startWorldWebServer({
   const runtime = new PersistentWorldRuntime({ path });
   const server = createWorldWebServer({ runtime, artifactRoot });
   server.on("close", () => runtime.close());
+  if (process.env.AI_QUEST_WORLD_LIVE === "1") {
+    const tail = startLiveTail({
+      runtime,
+      artifactPaths: process.env.AI_QUEST_WORLD_ARTIFACT_PATHS === "1",
+      settleMinutes: Number(process.env.AI_QUEST_WORLD_LIVE_SETTLE_MINUTES ?? 15),
+      log: message => console.log(`[live-tail] ${message}`)
+    });
+    server.on("close", () => tail.stop());
+  }
   server.listen(port, host, () => {
     const address = server.address();
     const resolvedPort = typeof address === "object" && address !== null ? address.port : port;

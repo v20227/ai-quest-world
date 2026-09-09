@@ -15,7 +15,8 @@
     "dev": "node apps/world-web/server.mjs",
     "observe:codex": "node apps/world-web/observe-codex.mjs",
     "collect:codex": "node apps/world-web/collect-codex.mjs",
-    "start": "node apps/world-web/server.mjs"
+    "start": "node apps/world-web/server.mjs",
+    "dev:live": "AI_QUEST_WORLD_LIVE=1 node apps/world-web/server.mjs"
   },
   "engines": {
     "node": ">=22.13.0"

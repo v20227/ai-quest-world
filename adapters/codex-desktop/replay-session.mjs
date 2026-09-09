@@ -120,7 +120,7 @@ export async function parseRolloutSession(lines, options = {}) {
   }
   if (assumeCompleted) {
     emitEvent(state, "run-terminal", "run.completed", {
-      native_outcome: "succeeded",
+      native_outcome: options.terminalNativeOutcome ?? "succeeded",
       output_summary_available: false
     }, "completed");
   }
