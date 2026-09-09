@@ -48,9 +48,9 @@ export function startLiveTail({
     if (stopped || polling) return;
     polling = true;
     try {
+      await refreshCodexTitles();
       await scanJoin(dshHome, "sessions", 3, name => name === "session.jsonl.zstd", "dsh");
       await scanJoin(codexHome, "sessions", 3, name => name.startsWith("rollout-") && name.endsWith(".jsonl"), "codex");
-      await refreshCodexTitles();
       const now = Date.now();
       for (const [filePath, entry] of files) {
         if (entry.settled || now - entry.lastWriteMs <= settleMinutes * 60_000) continue;
