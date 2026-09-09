@@ -320,3 +320,12 @@ body[data-theme] {
 @keyframes domain-pulse { 0% { filter:brightness(1); box-shadow:0 0 0 color-mix(in srgb,var(--cyan) 0%,transparent); } 35% { filter:brightness(1.55); box-shadow:0 0 18px color-mix(in srgb,var(--cyan) 85%,transparent); } 100% { filter:brightness(1); box-shadow:0 0 0 transparent; } }
 .domain-node.domain-pulse .pixel-icon { animation:domain-pulse .95s ease-out; border-radius:2px; }
 .reduce-motion .phase-stamp[aria-current="step"],.reduce-motion .phase-stamp.phase-pop,.reduce-motion .domain-node.domain-pulse .pixel-icon,#world-root.reduce-motion #board-evidence-progress.is-flowing::-webkit-progress-bar { animation:none!important; }
+
+/* Mini HUD（PRESENTATION_SPEC §5）：当前远征 标题 · 阶段 · 证据进度 */
+.hud-live-quest { display:grid; gap:1px; align-content:center; padding:4px 14px; border-left:3px solid var(--cyan); background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 12%,transparent),transparent); min-width:150px; max-width:260px; }
+.hud-live-quest[hidden] { display:none; }
+.hud-live-quest small:first-child { color:var(--panel-muted); font-size:9px; letter-spacing:.16em; }
+.hud-live-quest strong { font-size:13px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hud-live-quest #hud-live-quest-progress { color:var(--cyan); font-size:11px; animation:hud-live-breathe 2.2s ease-in-out infinite; }
+@keyframes hud-live-breathe { 0%,100% { opacity:.65; } 50% { opacity:1; } }
+.reduce-motion .hud-live-quest #hud-live-quest-progress { animation:none!important; }

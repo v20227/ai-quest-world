@@ -187,6 +187,14 @@ export function desktopGuildModel(snapshot, selectedQuestId = null) {
     }),
     inFlightCount: inFlight.length,
     returnCount: recentReturns.length,
+    live: inFlight.length ? {
+      questId: inFlight[0].quest_id,
+      title: inFlight[0].title,
+      phase: label(inFlight[0].phase ?? "DEPART"),
+      evidence: inFlight[0].validation_summary?.latest_passed != null
+        ? `${inFlight[0].validation_summary.latest_passed}/${inFlight[0].validation_summary.latest_total ?? "?"}`
+        : null
+    } : null,
     agents: selected?.agent_ids ?? [],
     domains: GUILD_DOMAINS.map(name => ({ name, value: snapshot.world.progression_totals?.domain_progress?.[name] ?? 0 })),
     artifacts: allArtifacts(snapshot.progressions, snapshot.quests),
@@ -230,6 +238,18 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
   picker.replaceChildren(...model.quests.map(quest => { const option = element("option", "", quest.title); option.value = quest.id; return option; }));
   picker.disabled = model.quests.length === 0; picker.value = model.selectedId ?? "";
   for (const [id, value] of Object.entries({ "total-growth": model.totals.xp, "active-expeditions": model.totals.active, "total-quests": model.totals.quests })) root.getElementById(id).textContent = String(value);
+  // Mini HUD（原方案 §5）：有进行中的远征时，顶栏常驻显示 标题 · 当前阶段 · 证据进度。
+  const liveHud = root.getElementById("hud-live-quest");
+  if (liveHud) {
+    if (model.live) {
+      liveHud.hidden = false;
+      const titleNode = root.getElementById("hud-live-quest-title");
+      if (titleNode.textContent !== model.live.title) titleNode.textContent = model.live.title;
+      root.getElementById("hud-live-quest-progress").textContent = `当前阶段 · ${model.live.phase}${model.live.evidence ? ` · 验证 ${model.live.evidence}` : ""}`;
+    } else {
+      liveHud.hidden = true;
+    }
+  }
   const domains = root.getElementById("domain-grid");
   const reduceMotion = root.defaultView?.matchMedia("(prefers-reduced-motion: reduce)")?.matches
     || root.body?.classList.contains("reduce-motion");
