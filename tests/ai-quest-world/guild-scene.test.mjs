@@ -82,7 +82,9 @@ test("root serves raster guild assets and a separate display-only scene module",
     "/assets/pixel/guild/portraits.png", "/assets/pixel/guild/domain-icons.png",
     "/assets/pixel/guild/hall-match.png", "/assets/pixel/guild/panel-match.png",
     "/assets/pixel/guild/parchment-match.png", "/assets/pixel/guild/portraits-match.png",
-    "/assets/pixel/guild/atlas-match.png"
+    "/assets/pixel/guild/atlas-match.png", "/assets/pixel/guild/quest-blossom.png",
+    "/assets/pixel/guild/ui-icons.png", "/assets/pixel/guild/hall-residents.png",
+    "/assets/pixel/guild/reader.png"
   ]) {
     const response = await fetch(origin + path);
     assert.equal(response.status, 200, path);

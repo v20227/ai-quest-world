@@ -5,7 +5,7 @@
 <div class="app-shell">
 <header class="topbar">
 <a class="brand" href="/" aria-label="AI 任务世界首页"><span class="brand-glyph" aria-hidden="true">✦</span><span class="brand-copy"><strong>AI 任务世界</strong><small>冒险公会 / 本地世界</small></span></a>
-<div class="desktop-totals"><div><small>进行中的远征</small><strong id="active-expeditions">—</strong></div><div><small>累计成长</small><strong><span id="total-growth">—</span> 经验</strong></div><div><small>任务纪事</small><strong id="total-quests">—</strong></div></div><div class="topbar-actions"><div class="connection-chip" id="connection-chip" aria-live="polite"><span class="signal-dot" aria-hidden="true"></span><span id="connection-label">连接中</span></div><button class="icon-button" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">◐</button><button class="icon-button" id="motion-toggle" type="button" aria-pressed="false" aria-label="减少动态效果" title="减少动态效果">≈</button><button class="icon-button" data-panel="settings" type="button" aria-label="打开设置">⚙</button></div>
+<div class="desktop-totals"><div><span class="hud-resource-icon pixel-icon" data-icon="2" aria-hidden="true"></span><small>进行中的远征</small><strong id="active-expeditions">—</strong></div><div><span class="hud-resource-icon pixel-icon" data-icon="5" aria-hidden="true"></span><small>累计成长</small><strong><span id="total-growth">—</span> 经验</strong></div><div><span class="hud-resource-icon pixel-icon" data-icon="1" aria-hidden="true"></span><small>任务纪事</small><strong id="total-quests">—</strong></div></div><div class="topbar-actions"><div class="connection-chip" id="connection-chip" aria-live="polite"><span class="signal-dot" aria-hidden="true"></span><span id="connection-label">连接中</span></div><button class="icon-button" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">◐</button><button class="icon-button" id="motion-toggle" type="button" aria-pressed="false" aria-label="减少动态效果" title="减少动态效果">≈</button><button class="icon-button" data-panel="settings" type="button" aria-label="打开设置">⚙</button></div>
 </header>
 <main class="world-layout">
 <section class="world-card" aria-labelledby="world-title">
@@ -51,8 +51,15 @@
 <button class="world-object object-gate" data-panel="gate" type="button" aria-label="打开 AI 传送门面板"><span class="location-mark" aria-hidden="true">III</span><span class="object-copy"><strong>AI 传送门</strong><small data-status-for="gate">休眠</small></span></button>
 <button class="world-object object-guild" data-panel="guild" type="button" aria-label="打开任务公会面板"><span class="location-mark" aria-hidden="true">IV</span><span class="object-copy"><strong>任务公会</strong><small data-status-for="guild">待修复</small></span></button>
 <button class="world-object object-camp" data-panel="camp" type="button" aria-label="打开营地面板"><span class="object-copy"><strong>世界地图</strong><small>小小营地 · 据点</small></span></button>
-<div class="archivist" aria-hidden="true"><img src="/assets/pixel/guild/archivist.png" alt=""><span class="character-shadow"></span></div>
+<div class="archivist" aria-hidden="true"><img src="/assets/pixel/guild/reader.png" alt=""><span class="character-shadow"></span></div>
 <div class="archivist-caption"><span id="archivist-state">档案管理员</span><small>在这里，收藏你的故事。</small></div>
+<div class="hall-resident resident-resting" aria-hidden="true"></div>
+<div class="hall-resident resident-robot" aria-hidden="true"></div>
+<div class="hall-resident resident-fox" aria-hidden="true"></div>
+<div class="hall-note note-resting" aria-hidden="true">休息一下<br>再出发。<span>z Z</span></div>
+<div class="hall-note note-robot" aria-hidden="true">每一点探索，<br>都留下足迹。</div>
+<div class="hall-note note-fox" aria-hidden="true">让创造<br>温暖生活。</div>
+<div class="map-note" aria-hidden="true">小小的努力<br>更好的自己。</div>
 <div class="scene-hint">选择一处地点，探索你的世界</div>
 </div>
 <div class="scene-footer"><div class="scene-status"><span class="status-mark" aria-hidden="true"></span><span id="scene-status">正在恢复连接…</span></div><div class="scene-view-actions"><button class="text-button" id="scene-fit-toggle" type="button" aria-pressed="true">原尺寸查看</button><button class="text-button" id="reload-demo" type="button" aria-label="刷新世界"><span id="reload-label">刷新世界</span> ↻</button></div></div>

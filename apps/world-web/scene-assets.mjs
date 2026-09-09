@@ -1,4 +1,5 @@
 export const SCENE_ASSETS = Object.freeze({
+  "agent.reader": Object.freeze({ id: "agent.reader", name: "阅卷旅人", role: "body", displayAccess: "default", src: "/assets/pixel/guild/reader.png", anchor: [0.5, 1], layer: 20 }),
   "workshop.desk": Object.freeze({ id: "workshop.desk", role: "furniture", src: "/assets/pixel/workshop/desk.png", anchor: [0.5, 1], layer: 10, runtimeReady: false }),
   "guild.environment": Object.freeze({ id: "guild.environment", role: "environment", src: "/assets/pixel/guild/hall-interior.png", anchor: [0.5, 0.5], layer: 0 }),
   "agent.archivist": Object.freeze({ id: "agent.archivist", name: "档案管理员", role: "body", displayAccess: "default", src: "/assets/pixel/guild/archivist.png", anchor: [0.5, 1], layer: 20 })

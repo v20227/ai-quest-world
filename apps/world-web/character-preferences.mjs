@@ -1,6 +1,6 @@
 import { CHARACTER_SLOTS, SCENE_ASSETS } from "./scene-assets.mjs";
 
-export const DEFAULT_CHARACTER = Object.freeze({ body: "agent.archivist" });
+export const DEFAULT_CHARACTER = Object.freeze({ body: "agent.reader" });
 const KEY = "ai-quest-world-character-v1";
 
 export function normalizeCharacterSelection(input) {

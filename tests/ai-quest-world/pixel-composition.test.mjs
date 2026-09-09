@@ -11,7 +11,10 @@ test("character preferences accept only available default layers and survive sto
   assert.deepEqual(saved, { saved: true, selection: { body: "agent.archivist" } });
   assert.deepEqual(loadCharacterSelection(storage), saved.selection);
   assert.equal(saveCharacterSelection(null, {}).saved, false);
-  assert.deepEqual(loadCharacterSelection({ getItem: () => "{" }), saved.selection);
+  assert.deepEqual(loadCharacterSelection({ getItem: () => "{" }), { body: "agent.reader" });
+  assert.deepEqual(loadCharacterSelection(null), { body: "agent.reader" });
+  assert.equal(composeCharacterLayers(loadCharacterSelection(null))[0].src, "/assets/pixel/guild/reader.png");
+  assert.deepEqual(loadCharacterSelection(storage), { body: "agent.archivist" });
   assert.equal(composeCharacterLayers({ body: "workshop.desk" }).length, 0);
 });
 

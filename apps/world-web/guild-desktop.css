@@ -4,24 +4,29 @@ body[data-theme] {
   --panel-line: color-mix(in srgb,var(--cyan) 18%,var(--panel-hi));
   --ribbon: color-mix(in srgb,var(--red) 60%,var(--wood-dark));
   --scene-width: 1600px;
+  --hall-display: "PingFang SC", "Microsoft YaHei", ui-monospace, monospace;
 }
 .app-shell { max-width:1920px; min-width:1180px; }
-.world-scene { display:block; padding:0; height:56.28vw; min-height:664px; max-height:1080px; }
+.world-scene { display:block; padding:0; height:56.28vw; min-height:720px; max-height:1080px; }
 .hall-environment { object-fit:cover; object-position:center; }
-.topbar { top:0; left:17%; right:17%; padding:9px 16px; min-height:68px; gap:14px; border:3px ridge var(--frame-edge); }
+.topbar { top:0; left:17.7%; right:17.3%; padding:0; min-height:72px; gap:4px; border:8px solid transparent; border-image:url('/assets/pixel/guild/panel-match.png') 65 fill / 8px; }
 .brand-copy strong { font-size:12px; letter-spacing:.06em; }
 .brand-copy small { font-size:8px; }
 .brand-glyph { font-size:28px; text-shadow:0 0 14px var(--cyan); }
-.desktop-totals { display:flex; gap:18px; flex:1; justify-content:space-evenly; }
-.desktop-totals > div { padding-left:14px; }
-.desktop-totals small { font-size:10px; letter-spacing:0; white-space:nowrap; }
-.desktop-totals strong { font-size:20px; }
+.desktop-totals { display:flex; gap:4px; flex:1; justify-content:space-evenly; align-self:stretch; }
+.desktop-totals > div { flex:1; position:relative; display:flex; flex-direction:column; justify-content:center; padding:4px 8px 4px 52px; border:1px solid var(--panel-line); background:linear-gradient(var(--panel-hi),var(--night)); box-shadow:inset 0 1px color-mix(in srgb,var(--cyan) 20%,transparent); }
+.desktop-totals .hud-resource-icon { position:absolute; left:6px; top:50%; transform:translateY(-50%); width:40px; height:40px; }
+.desktop-totals small { font-size:12px; color:var(--cyan); letter-spacing:0; white-space:nowrap; }
+.desktop-totals strong { font-size:22px; color:var(--text); }
+.topbar .brand { padding:4px 10px; }
+.topbar .brand-copy { display:none; }
+.topbar .topbar-actions { padding:0 8px; }
 .topbar-actions { gap:7px; }
 .connection-chip { font-size:10px; margin:0; }
 .icon-button { width:30px; height:32px; }
 .scene-heading { top:8.7%; left:36%; right:33.5%; height:13.4%; padding:8px 14px; border:14px solid transparent; border-image:url('/assets/pixel/guild/panel-match.png') 65 fill / 14px / 0 stretch; }
 .scene-heading .eyebrow { display:none; }
-.scene-heading h1 { font-size:clamp(32px,3.35vw,60px); margin:0 0 2px; color:var(--paper-hi); letter-spacing:.05em; line-height:1.12; }
+.scene-heading h1 { font-family:var(--hall-display); font-weight:900; font-size:clamp(32px,3.35vw,60px); margin:0 0 2px; color:var(--paper-hi); letter-spacing:.09em; line-height:1.12; text-shadow:3px 0 var(--paper-shade),0 3px var(--wood-dark),3px 3px var(--wood-dark); }
 .scene-heading h1::before { content:"♛"; position:absolute; top:-12px; left:46%; font-size:20px; color:var(--gold); }
 .scene-subtitle { font-size:12px; letter-spacing:.13em; }
 .desktop-composition { position:absolute; display:grid; left:10%; right:10%; top:22.2%; height:45.8%; min-height:0; gap:14px; grid-template-columns:minmax(0,1fr) minmax(0,2.02fr) minmax(0,1fr); grid-template-rows:minmax(0,1fr); align-items:stretch; }
@@ -36,35 +41,35 @@ body[data-theme] {
 .desktop-composition > .growth-panel { grid-area:1 / 3; }
 .world-scene > .world-object { position:absolute; margin:0; }
 .game-panel-heading { min-height:39px; padding:10px 12px; border-bottom:1px solid var(--panel-line); }
-.game-panel-heading h2 { font:700 clamp(15px,1.2vw,22px)/1.3 var(--display); white-space:nowrap; }
+.game-panel-heading h2 { font:700 clamp(15px,1.2vw,22px)/1.3 var(--hall-display); white-space:nowrap; }
 .game-panel-heading h2 small { font:10px system-ui,sans-serif; color:var(--muted); }
 .game-panel-heading > span { font-size:9px; letter-spacing:0; }
 #desktop-roster { padding:4px; min-height:100px; flex:1; display:flex; flex-direction:column; gap:5px; }
-.roster-run { border:1px solid var(--panel-line); padding:8px 6px; margin:0; gap:10px; min-height:76px; flex:1; max-height:104px; background:linear-gradient(110deg,color-mix(in srgb,var(--panel-hi) 70%,transparent),color-mix(in srgb,var(--night) 80%,transparent)); box-shadow:inset 0 1px color-mix(in srgb,var(--cyan) 12%,transparent); }
+.roster-run { border:1px solid var(--panel-line); padding:4px 6px; margin:0; gap:10px; min-height:0; flex:1; max-height:104px; background:linear-gradient(110deg,color-mix(in srgb,var(--panel-hi) 70%,transparent),color-mix(in srgb,var(--night) 80%,transparent)); box-shadow:inset 0 1px color-mix(in srgb,var(--cyan) 12%,transparent); }
 .roster-run.is-current { border-color:var(--frame-edge); background:linear-gradient(110deg,color-mix(in srgb,var(--cyan) 12%,var(--panel-hi)),var(--panel)); box-shadow:inset 3px 0 var(--gold); }
-.roster-portrait { display:block; width:65px; height:65px; flex:none; border:1px solid var(--panel-line); background-image:url('/assets/pixel/guild/portraits-match.png'); background-size:200% 200%; image-rendering:pixelated; }
+.roster-portrait { display:block; width:66px; height:auto; max-height:66px; align-self:stretch; flex:none; border:1px solid var(--panel-line); background-image:url('/assets/pixel/guild/portraits-match.png'); background-size:200% 200%; image-rendering:pixelated; }
 .roster-portrait[data-portrait="0"] { background-position:0 0; }
 .roster-portrait[data-portrait="1"] { background-position:100% 0; }
 .roster-portrait[data-portrait="2"] { background-position:0 100%; }
 .roster-portrait[data-portrait="3"] { background-position:100% 100%; }
-.roster-copy { gap:5px; flex:1; }
-.roster-copy strong { font-size:12px; line-height:1.4; }
-.roster-copy small { font-size:9px; }
+.roster-copy { gap:2px; flex:1; }
+.roster-copy strong { font-size:13px; line-height:1.3; }
+.roster-copy small { font-size:9px; line-height:1.2; }
 .roster-copy .run-id { display:none; }
 .roster-copy .run-state::before { content:"◆ "; font-size:8px; }
 .roster-panel #agent-identities { padding:4px 12px; font-size:9px; max-height:35px; overflow:auto; }
 .roster-panel > .secondary-button { margin:4px 10px 10px; min-height:30px; padding:4px 8px; font-size:10px; }
 .desktop-composition .quest-board { position:relative; inset:auto; width:auto; min-width:0; overflow:auto; border:15px solid transparent; border-image:url('/assets/pixel/guild/parchment-match.png') 95 fill / 15px / 0 stretch; background:none; scrollbar-width:thin; scrollbar-color:var(--paper-shade) var(--paper); }
-.board-ribbon { background:linear-gradient(90deg,var(--ribbon) 0 36%,var(--paper) 37%,var(--paper-hi)); color:var(--paper-hi); padding:6px 13px; min-height:32px; border-bottom:1px solid var(--paper-shade); }
+.board-ribbon { background:linear-gradient(90deg,color-mix(in srgb,var(--red) 80%,var(--wood)) 0 34%,var(--paper) 35%,var(--paper-hi)); color:var(--paper-hi); padding:6px 13px; min-height:32px; border-bottom:1px solid var(--paper-shade); }
 .board-ribbon > span:first-child { font-weight:700; font-size:13px; }
 .board-ribbon > span:last-child { color:var(--paper-muted); font-size:10px; letter-spacing:0; }
-.desktop-composition .board-body { padding:6px 12px; min-height:0; display:grid; grid-template-rows:minmax(min-content,1fr) 16px 44px 34px 24px 64px; gap:4px; }
+.desktop-composition .board-body { padding:6px 12px; min-height:0; display:grid; grid-template-rows:minmax(min-content,1fr) 22px 42px 28px 25px 66px; gap:4px; }
 .quest-hero { position:relative; min-height:0; display:flex; gap:12px; align-items:flex-start; isolation:isolate; overflow:hidden; }
-.quest-hero-art { position:absolute; z-index:-1; inset:0 0 0 43%; background:url('/assets/pixel/guild/world-atlas.png') 90% 40%/auto 210%; image-rendering:pixelated; opacity:.85; mask-image:linear-gradient(90deg,transparent,black 55%); }
+.quest-hero-art { position:absolute; z-index:-1; inset:0; background:url('/assets/pixel/guild/quest-blossom.png') center/cover; image-rendering:pixelated; }
 .quest-hero-copy { min-width:0; flex:1; padding-bottom:8px; }
 .quest-hero-copy .eyebrow { font-size:10px; margin-top:2px; }
 .desktop-composition .board-body h2 { font-size:clamp(22px,1.65vw,32px); line-height:1.25; margin:7px 0; max-width:100%; text-shadow:0 1px var(--paper-hi); }
-#board-description { color:var(--paper-ink); font-size:11px; line-height:1.6; max-width:82%; background:color-mix(in srgb,var(--paper-hi) 70%,transparent); }
+#board-description { color:var(--paper-ink); font-size:12px; line-height:1.5; max-width:65%; background:color-mix(in srgb,var(--paper-hi) 65%,transparent); }
 .pixel-icon { display:block; flex:none; width:42px; height:42px; background-image:url('/assets/pixel/guild/domain-icons.png'); background-size:300% 200%; image-rendering:pixelated; }
 .pixel-icon[data-icon="0"] { background-position:0 0; }
 .pixel-icon[data-icon="1"] { background-position:50% 0; }
@@ -72,9 +77,10 @@ body[data-theme] {
 .pixel-icon[data-icon="3"] { background-position:0 100%; }
 .pixel-icon[data-icon="4"] { background-position:50% 100%; }
 .pixel-icon[data-icon="5"] { background-position:100% 100%; }
+.domain-sigil.pixel-icon,.phase-stamp .pixel-icon,.hud-resource-icon.pixel-icon { background-image:url('/assets/pixel/guild/ui-icons.png'); }
 .quest-emblem { width:60px; height:60px; border:3px ridge var(--paper-shade); margin-top:6px; }
-.quest-difficulty { display:flex; gap:14px; align-items:center; color:var(--paper-muted); font-size:10px; }
-#board-difficulty { color:var(--wood); letter-spacing:.08em; }
+.quest-difficulty { display:flex; gap:14px; align-items:center; color:var(--paper-ink); font-size:12px; }
+#board-difficulty { color:var(--gold); font-size:19px; text-shadow:1px 1px var(--wood); letter-spacing:.08em; }
 .desktop-composition .board-facts { display:grid; grid-template-columns:1.3fr 1fr .7fr; gap:8px; margin:0; padding:4px 0; }
 .board-facts > span { font-size:10px; padding-left:9px; border-left:1px solid var(--paper-shade); }
 .board-facts > span:first-child { border:0; padding-left:0; }
@@ -90,8 +96,9 @@ body[data-theme] {
 .phase-heading h3 { font:700 13px var(--display); color:var(--paper-hi); padding:5px 17px 5px 9px; background:linear-gradient(90deg,var(--panel),var(--panel-hi)); clip-path:polygon(0 0,96% 0,100% 50%,96% 100%,0 100%); }
 .phase-heading > span { color:var(--paper-muted); font-size:9px; }
 .desktop-composition .board-phases { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; margin:0; }
-.phase-stamp { position:relative; display:grid; justify-items:center; gap:1px; padding:3px 2px; font-size:10px; border:1px solid var(--paper-shade); background:linear-gradient(var(--paper-hi),var(--paper)); }
-.phase-stamp .pixel-icon { width:30px; height:30px; opacity:.55; }
+.phase-stamp { position:relative; display:grid; justify-items:center; gap:1px; padding:3px 2px; font-size:10px; line-height:1.15; border:1px solid var(--paper-shade); background:linear-gradient(var(--paper-hi),var(--paper)); }
+.phase-stamp .pixel-icon { width:38px; height:38px; opacity:.7; }
+.phase-stamp:not(:last-child)::after { content:"›"; position:absolute; right:-7px; top:25%; color:var(--paper-ink); font-size:22px; z-index:1; }
 .phase-stamp[aria-current="step"] { color:var(--paper-ink); border:2px solid var(--cyan); padding:4px 1px; box-shadow:0 0 7px color-mix(in srgb,var(--cyan) 50%,transparent); }
 .phase-stamp[aria-current="step"] .pixel-icon { opacity:1; }
 .phase-stamp small { font-size:8px; color:var(--paper-muted); }
@@ -109,7 +116,8 @@ body[data-theme] {
 .domain-node:nth-child(4) { grid-area:2/3; }
 .domain-node:nth-child(5) { grid-area:3/1; }
 .domain-node:nth-child(6) { grid-area:3/3; }
-.domain-sigil.pixel-icon { width:42px; height:42px; border:2px solid var(--panel-line); box-shadow:0 0 7px color-mix(in srgb,var(--cyan) 12%,transparent); }
+.domain-sigil.pixel-icon { width:52px; height:52px; border:2px solid var(--cyan); box-shadow:0 0 8px color-mix(in srgb,var(--cyan) 30%,transparent),inset 0 0 4px var(--panel-hi); }
+.domain-node:nth-child(3) .domain-sigil { border-color:var(--gold-hi); box-shadow:0 0 12px color-mix(in srgb,var(--gold) 55%,transparent); }
 .domain-node:hover .pixel-icon,.domain-node:focus-visible .pixel-icon { border-color:var(--cyan); }
 .domain-node strong { font-size:10px; font-weight:500; color:var(--cyan); }
 .domain-node small { font-size:9px; }
@@ -127,13 +135,22 @@ body[data-theme] {
 .world-object .object-copy strong { font-size:12px; }
 .world-object .object-copy small { font-size:8px; letter-spacing:0; }
 .location-mark { display:none; }
-.world-object.object-library { left:24%; top:auto; bottom:7%; }
-.world-object.object-workshop { left:36%; right:auto; top:auto; bottom:5%; }
-.world-object.object-guild { left:47%; top:auto; bottom:8%; }
-.world-object.object-gate { left:59%; right:auto; top:auto; bottom:5%; }
-.world-object.object-camp { left:70%; top:auto; bottom:7%; }
+.world-object.object-library { left:27%; top:auto; bottom:15%; }
+.world-object.object-workshop { left:37%; right:auto; top:auto; bottom:10%; }
+.world-object.object-guild { left:47%; top:auto; bottom:16%; }
+.world-object.object-gate { left:58%; right:auto; top:auto; bottom:10%; }
+.world-object.object-camp { left:67%; top:auto; bottom:12%; }
 .archivist { width:110px; height:155px; left:4%; bottom:10%; }
 .archivist-caption { display:block; left:8%; bottom:3%; max-width:185px; }
+.hall-resident { position:absolute; z-index:3; width:8%; aspect-ratio:1; background:url('/assets/pixel/guild/hall-residents.png') 0 0/200% 200%; image-rendering:pixelated; pointer-events:none; }
+.resident-resting { left:10%; bottom:12%; background-position:100% 0; }
+.resident-robot { left:79%; bottom:15%; background-position:0 100%; }
+.resident-fox { right:2%; bottom:14%; background-position:100% 100%; }
+.hall-note { position:absolute; z-index:4; padding:7px; color:var(--paper-hi); background:linear-gradient(var(--panel-hi),var(--night)); border:2px solid var(--frame-edge); font:12px/1.4 var(--hall-display); pointer-events:none; box-shadow:2px 3px var(--wood-dark); }
+.hall-note::after { content:""; position:absolute; left:18px; bottom:-8px; border-top:7px solid var(--frame-edge); border-right:7px solid transparent; }
+.note-resting { left:8%; bottom:24%; }.note-resting span { position:absolute; right:-48px; bottom:-22px; color:var(--cyan); font-size:22px; }
+.note-robot { left:77%; bottom:26%; }.note-fox { right:3%; bottom:27%; }
+.map-note { position:absolute; z-index:3; left:66%; bottom:23%; transform:rotate(3deg); padding:10px; background:var(--paper); border:3px ridge var(--paper-shade); color:var(--wood); font:12px/1.4 var(--hall-display); pointer-events:none; }
 .scene-hint,.expedition-plaque { display:none; }
 .hall-light { top:17%; height:6%; }
 .hall-light-left { left:28%; }.hall-light-right { right:28%; }
@@ -186,12 +203,51 @@ body[data-theme] {
   .desktop-composition { left:10%; right:10%; gap:10px; }
   .game-panel-heading h2 small { display:none; }
   .scene-heading { top:8.7%; }
-  .roster-portrait { width:52px; height:58px; }
+  .roster-portrait { width:48px; height:48px; }
+  .roster-run { min-height:0; max-height:none; padding:3px 4px; gap:6px; }
+  .roster-copy { gap:2px; }
+  .roster-copy small { font-size:8px; }
+  .roster-panel #agent-identities { max-height:20px; padding:2px 8px; }
+  .roster-panel > .secondary-button { min-height:24px; margin:2px 6px 4px; }
+  .game-panel-heading { padding:6px 8px; min-height:30px; }
   .roster-copy strong { font-size:11px; }
   .quest-emblem { width:46px; height:46px; }
-  .quest-hero { min-height:102px; }
-  .desktop-composition .board-body { padding:10px 12px; }
+  .quest-hero { min-height:0; }
+  .quest-hero-copy { padding-bottom:2px; }
+  .desktop-composition .board-body { padding:4px 8px; grid-template-rows:minmax(min-content,1fr) 18px 33px 22px 21px 50px; gap:2px; }
+  .desktop-composition .board-body h2 { font-size:18px; margin:3px 0; }
+  #board-description { font-size:10px; line-height:1.3; max-width:75%; }
+  .quest-hero-copy .eyebrow { font-size:8px; }
+  .desktop-composition .board-facts { padding:2px 0; line-height:1.2; }
+  .board-facts strong { font-size:13px; margin-top:1px; }
+  .board-facts > span { font-size:9px; }
+  .board-validation { font-size:9px; padding:0; }
+  .phase-stamp .pixel-icon { width:24px; height:24px; }
+  .phase-stamp,.phase-stamp[aria-current="step"] { font-size:9px; padding:2px 1px; gap:0; }
+  .phase-heading h3 { font-size:11px; padding:3px 9px; }
+  #board-difficulty { font-size:17px; line-height:1; }
+  #domain-grid { min-height:155px; padding:3px 8px; gap:2px; }
+  .domain-sigil.pixel-icon { width:35px; height:35px; }
+  .domain-node strong,.domain-node small { font-size:8px; }
+  #desktop-artifacts { min-height:64px; padding:4px; gap:4px; }
+  .artifact-symbol.pixel-icon { width:27px; height:27px; }
+  .hall-note,.map-note { font-size:9px; padding:5px; }
+  .desktop-totals > div { padding-left:38px; }
+  .desktop-totals .hud-resource-icon { width:29px; height:29px; }
+  .desktop-totals small { font-size:10px; }
+  .desktop-totals strong { font-size:18px; }
   .board-ribbon > span:last-child { font-size:9px; }
+}
+@media(min-width:1301px) and (max-width:1450px) {
+  .desktop-composition .board-body { grid-template-rows:minmax(min-content,1fr) 18px 40px 28px 24px 60px; gap:3px; }
+  .phase-stamp .pixel-icon { width:29px; height:29px; }
+  .roster-portrait { width:58px; height:58px; }
+  .roster-run { min-height:0; padding:5px; }
+  .roster-copy strong { font-size:12px; }
+  .domain-sigil.pixel-icon { width:40px; height:40px; }
+  #domain-grid { min-height:168px; padding:4px 8px; }
+  #desktop-artifacts { min-height:70px; padding:4px; }
+  .artifact-symbol.pixel-icon { width:29px; height:29px; }
 }
 @media(max-width:900px) {
   body { overflow-x:auto; }
