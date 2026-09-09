@@ -95,6 +95,37 @@ export class SemanticEngine {
   }
 
   /**
+   * 增量入口：事件按全局时间序到达时，仅处理该事件本身（保留状态），
+   * 不重放历史。与 process() 对同序事件流产出逐字节一致的记录。
+   * @param {unknown} input
+   * @returns {import("./semantic-types.mjs").SemanticRecord|null}
+   */
+  ingestOrdered(input) {
+    const event = parseRuntimeEvent(input);
+    if (this.#processedEventIds.has(event.event_id)) return null;
+    this.#history.set(event.event_id, event);
+    this.#lineage.observe(event);
+    const rootRunId = this.#lineage.rootFor(event.context.run_id);
+    if (rootRunId === null) return null;
+    const state = this.#getOrCreateState(rootRunId);
+    const interpretation = interpretEvent(event, state);
+    if (interpretation === null) {
+      this.#processedEventIds.add(event.event_id);
+      return null;
+    }
+    const record = createSemanticRecord(event, rootRunId, interpretation);
+    validateSemanticRecord(record);
+    state.records.push(record);
+    state.phase = record.phase;
+    state.lastSemanticKind = record.kind;
+    for (const domain of SEMANTIC_DOMAINS) {
+      state.domainScores[domain] += record.domain_contributions[domain];
+    }
+    this.#processedEventIds.add(event.event_id);
+    return cloneJson(record);
+  }
+
+  /**
    * @param {string} rootRunId
    * @returns {import("./semantic-types.mjs").SemanticRecord[]}
    */

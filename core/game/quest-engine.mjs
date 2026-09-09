@@ -133,8 +133,29 @@ export class QuestEngine {
    * @param {import("../semantic/semantic-types.mjs").SemanticRecord[]|{records?: import("../semantic/semantic-types.mjs").SemanticRecord[]}} [semanticRecords]
    * @returns {import("./quest-types.mjs").Quest[]}
    */
-  process(events, semanticRecords = []) {
+  /**
+   * 增量入口：事件按全局时间序到达时，仅处理新事件（保留任务状态与谱系），
+   * 不清空、不重放历史。返回本批触碰到的任务快照。
+   * @param {unknown[]} events 已按全局序排列的事件批次
+   * @param {import("../semantic/semantic-types.mjs").SemanticRecord[]} records 本批新产生的语义记录
+   * @returns {Array<Record<string, unknown>>}
+   */
+  ingestBatch(events, records = []) {
     if (!Array.isArray(events)) {
+      throw new TypeError("events must be an array");
+    }
+    for (const record of records) {
+      this.#semanticHistory.set(record.source_event_id, validateSemanticRecord(record));
+    }
+    const touched = [];
+    for (const input of events) {
+      const quest = this.#ingestKnown(input, this.#semanticHistory.get(parseRuntimeEvent(input).event_id) ?? null);
+      if (quest !== null) touched.push(quest);
+    }
+    return touched;
+  }
+
+  process(events, semanticRecords = []) {    if (!Array.isArray(events)) {
       throw new TypeError("events must be an array");
     }
     const records = Array.isArray(semanticRecords) ? semanticRecords : semanticRecords.records ?? [];

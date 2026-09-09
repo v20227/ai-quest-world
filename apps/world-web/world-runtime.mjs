@@ -3,6 +3,8 @@ import { assertHarnessAdapter } from "../../packages/adapter-core/contracts.mjs"
 import { SqliteEventStore } from "../../storage/sqlite/index.mjs";
 import { SqliteProjectionStore } from "../../storage/sqlite/projection-store.mjs";
 import { projectWorld, PROJECTION_POLICY_VERSION } from "./project-world.mjs";
+import { WorldProjector } from "./projector.mjs";
+import { orderRuntimeEvents } from "../../packages/uarp/run-lineage.mjs";
 import { worldAtTime } from "../../core/world/world-view.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
@@ -32,6 +34,7 @@ export class PersistentWorldRuntime {
   #identityEventCount = -1;
   #collectionStore;
   #economyStore;
+  #projector = new WorldProjector();
 
   /** @param {{path?: string}=} options */
   constructor({ path = "storage/sqlite/ai-quest-world.sqlite" } = {}) {
@@ -196,12 +199,22 @@ export class PersistentWorldRuntime {
   #materialize() {
     this.#assertOpen();
     const metadata = this.#projectionStore.getMetadata();
-    if (metadata?.policy_version === PROJECTION_POLICY_VERSION && metadata.event_count === this.#eventStore.count()) return;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const events = this.#eventStore.list();
-      if (this.#projectionStore.replace(projectWorld(events), this.#memory ? {} : { expectedEventCount: events.length })) return;
+    const total = this.#eventStore.count();
+    if (metadata?.policy_version === PROJECTION_POLICY_VERSION && metadata.event_count === total) return;
+    const events = this.#eventStore.list();
+    // 增量路径：仅处理事件库水位之上的新事件（O(新事件)，不再全量重放）。
+    if (metadata?.policy_version === PROJECTION_POLICY_VERSION && metadata.event_count === this.#projector.processedCount) {
+      const result = this.#projector.ingest(events.slice(this.#projector.processedCount));
+      if (!result.outOfOrder) {
+        this.#projectionStore.replace(this.#projector.snapshot(), this.#memory ? {} : { expectedEventCount: total });
+        return;
+      }
     }
-    throw new Error("Event history changed during projection; retry after current ingestion completes");
+    // 全量路径：冷启动、策略变更或检测到乱序（迟到/回填事件）——按全局时间序重建。
+    const ordered = orderRuntimeEvents(events);
+    this.#projector = new WorldProjector();
+    this.#projector.ingest(ordered);
+    this.#projectionStore.replace(this.#projector.snapshot(), this.#memory ? {} : { expectedEventCount: total });
   }
 
   #assertOpen() {
