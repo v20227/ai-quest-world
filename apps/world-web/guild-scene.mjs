@@ -242,9 +242,9 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
     const valueNode = button.querySelector("small");
     const previous = Number(button.dataset.value ?? "0");
     const target = domain.value;
-    if (target === previous) { valueNode.textContent = `${target} / 100`; continue; }
+    if (target === previous) { valueNode.textContent = `${target} / 100`; return; }
     button.dataset.value = String(target);
-    if (reduceMotion || previous > target) { valueNode.textContent = `${target} / 100`; continue; }
+    if (reduceMotion || previous > target) { valueNode.textContent = `${target} / 100`; return; }
     // 成长是值得被看见的：数值滚动 + 星位脉冲。
     button.classList.remove("domain-pulse");
     void button.offsetWidth;
