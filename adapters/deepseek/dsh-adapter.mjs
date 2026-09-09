@@ -157,7 +157,7 @@ async function consumeRecord(state, record) {
 
   if (type === "session") {
     emitEvent(state, "run-started", "run.started", {
-      ...(state.title === undefined ? {} : { title: state.title }),
+      ...(state.title == null ? {} : { title: state.title }),
       task_text_available: false,
       mode: "deepseek-dsh-replay",
       ...(state.resumedFromRunId === undefined ? {} : { resumed_from_run_id: state.resumedFromRunId })
