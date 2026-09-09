@@ -12,6 +12,7 @@ import { analyzeRuntimeEvents } from "../../core/semantic/semantic-engine.mjs";
 import { createInitialWorldState } from "../../core/world/world-state-types.mjs";
 import { SqliteEventStore } from "../../storage/sqlite/event-store.mjs";
 import { SqliteProjectionStore } from "../../storage/sqlite/projection-store.mjs";
+import { CURRENT_SCHEMA_VERSION } from "../../storage/sqlite/schema.mjs";
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const events = createSimulatedRunSequence({ includeChildRun: false });
@@ -233,7 +234,7 @@ test("schema 3 migrates to 4 while preserving every existing row", async (t) => 
   const tables = ["runtime_events", "world_state", "quests", "progressions", "world_applied_inputs", "sqlite_sequence"];
   const before = tables.map((table) => database.prepare(`SELECT * FROM ${table}`).all());
   const store = file.track(new SqliteProjectionStore({ path: file.path }));
-  assert.equal(database.prepare("PRAGMA user_version").get().user_version, 4);
+  assert.equal(database.prepare("PRAGMA user_version").get().user_version, CURRENT_SCHEMA_VERSION);
   assert.deepEqual(tables.map((table) => database.prepare(`SELECT * FROM ${table}`).all()), before);
   assert.deepEqual(store.getSnapshot(), snapshot(old));
   assert.equal(store.getMetadata(), null);

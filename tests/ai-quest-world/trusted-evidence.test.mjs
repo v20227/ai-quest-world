@@ -24,7 +24,7 @@ async function collect(items, options = {}) {
       const child = new EventEmitter();
       child.stdout = new PassThrough(); child.stderr = new PassThrough();
       queueMicrotask(() => {
-        for (const row of [...items, { type: "turn.completed" }]) child.stdout.write(`${JSON.stringify(row)}\n`);
+        for (const row of [{ type: "thread.started", thread_id: "trusted-thread" }, ...items, { type: "turn.completed" }]) child.stdout.write(`${JSON.stringify(row)}\n`);
         child.stdout.end(); child.emit("close", 0, null);
       });
       return child;

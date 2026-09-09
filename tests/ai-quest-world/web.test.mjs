@@ -120,9 +120,21 @@ test("persistent Web endpoint survives restart and replays events idempotently",
   const replay = reopenedRuntime.ingest(events);
   assert.equal(replay.insertedCount, 0);
   assert.equal(replay.duplicateCount, events.length);
-  assert.deepEqual(reopenedRuntime.getSnapshot({ at: firstPayload.world.updated_at }), {
-    world: firstPayload.world,
-    quests: firstPayload.quests,
-    progressions: firstPayload.progressions
-  });
+  const replayedSnapshot = reopenedRuntime.getSnapshot({ at: firstPayload.world.updated_at });
+  assert.deepEqual(
+    {
+      world: replayedSnapshot.world,
+      quests: replayedSnapshot.quests,
+      progressions: replayedSnapshot.progressions,
+      collection: replayedSnapshot.collection,
+      economy: replayedSnapshot.economy
+    },
+    {
+      world: firstPayload.world,
+      quests: firstPayload.quests,
+      progressions: firstPayload.progressions,
+      collection: firstPayload.collection,
+      economy: firstPayload.economy
+    }
+  );
 });

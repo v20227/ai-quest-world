@@ -113,12 +113,12 @@ export class PersistentWorldRuntime {
   }
 
   /** @returns {{world: Record<string, unknown>, quests: Record<string, unknown>[], progressions: Record<string, unknown>[]}} */
-  getSnapshot({ at } = {}) {
+  getSnapshot({ at, withObservability = false } = {}) {
     this.#assertOpen();
     this.#materialize();
     const snapshot = this.#projectionStore.getSnapshot();
     if (at !== undefined) snapshot.world = worldAtTime(snapshot.world, at, snapshot.quests);
-    snapshot.observability = this.getObservability();
+    if (withObservability) snapshot.observability = this.getObservability();
     this.#collectionStore.record(milestoneCollectibles(snapshot.world));
     snapshot.collection = this.#collectionStore.snapshot();
     this.#economyStore.recordWork(workGoldGrants(snapshot.progressions));

@@ -10,6 +10,10 @@ import { PersistentWorldRuntime } from "./world-runtime.mjs";
 import { isLocalRequest, readArtifact } from "./artifact-access.mjs";
 import { handleCollectionPlacement } from "./collection-api.mjs";
 import { handleEconomyRequest } from "./economy-api.mjs";
+import { SqliteCollectionStore } from "../../storage/sqlite/collection-store.mjs";
+import { SqliteEconomyStore } from "../../storage/sqlite/economy-store.mjs";
+import { milestoneCollectibles } from "../../core/game/collection-rewards.mjs";
+import { workGoldGrants } from "../../core/game/economy-policy.mjs";
 
 const APP_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_FILES = new Map([
@@ -73,7 +77,22 @@ export function buildDemoSnapshot({ mode = "canonical" } = {}) {
     ].includes(event.type))
     : fullEvents;
   const { world, quests, progressions } = projectWorld(events);
-  return { world, quests, progressions };
+  const collectionStore = new SqliteCollectionStore({ path: ":memory:" });
+  const economyStore = new SqliteEconomyStore({ path: ":memory:" });
+  try {
+    collectionStore.record(milestoneCollectibles(world));
+    economyStore.recordWork(workGoldGrants(progressions));
+    return {
+      world,
+      quests,
+      progressions,
+      collection: collectionStore.snapshot(),
+      economy: economyStore.snapshot()
+    };
+  } finally {
+    collectionStore.close();
+    economyStore.close();
+  }
 }
 
 /** @param {{runtime?: PersistentWorldRuntime|null}=} options @returns {import("node:http").Server} */
@@ -168,7 +187,7 @@ async function handleRequest(request, response, runtime, artifactRoot) {
       return;
     }
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-    response.end(JSON.stringify({ ...withGameplay(runtime.getSnapshot({ at: new Date().toISOString() })), display_namespace: runtime.getDisplayNamespace(), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
+    response.end(JSON.stringify({ ...withGameplay(runtime.getSnapshot({ at: new Date().toISOString(), withObservability: true })), display_namespace: runtime.getDisplayNamespace(), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
     return;
   }
 

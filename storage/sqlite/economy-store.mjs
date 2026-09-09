@@ -11,7 +11,7 @@ export class SqliteEconomyStore {
       database.exec("PRAGMA busy_timeout = 5000");
       migrateDatabase(database);
       database.prepare("INSERT OR IGNORE INTO economy_state VALUES (1, ?)").run(JSON.stringify({
-        revision: 0, gold: 0, inventory: {}, pets: [], selected_pet_id: null, activated_at: new Date().toISOString()
+        revision: 0, gold: 0, inventory: {}, pets: [], selected_pet_id: null, activated_at: null
       }));
       this.#database = database;
     } catch (error) { database.close(); throw error; }
@@ -35,11 +35,15 @@ export class SqliteEconomyStore {
       const statement = this.#database.prepare("INSERT OR IGNORE INTO economy_work_grants VALUES (?, ?)");
       for (const grant of grants) {
         if (!Number(statement.run(grant.root_run_id, JSON.stringify(grant)).changes)) continue;
+        // Work grants are facts about past settlements: their timestamps derive
+        // from the settlement itself, never from the wall clock, so replaying
+        // the same event history reproduces a byte-identical economy.
+        state.activated_at ??= grant.occurred_at;
         const balance = state.gold + grant.amount;
         if (!Number.isSafeInteger(balance)) throw new EconomyError("LIMIT_REACHED", "金币余额已达上限。");
         state.gold = balance;
         this.#entry({ type: "work_reward", ...grant, gold_delta: grant.amount, balance_after: balance,
-          recorded_at: new Date().toISOString(), historical: Date.parse(grant.occurred_at) < Date.parse(state.activated_at) });
+          recorded_at: grant.occurred_at, historical: Date.parse(grant.occurred_at) < Date.parse(state.activated_at) });
         changed = true;
       }
       if (changed) { state.revision += 1; this.#save(state); }

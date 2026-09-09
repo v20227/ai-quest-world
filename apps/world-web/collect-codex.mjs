@@ -22,7 +22,7 @@ export async function collectCodex({ input = process.stdin, env = process.env } 
     const snapshot = await runtime.runAdapter(adapter, { connectionId: env.AI_QUEST_WORLD_CONNECTION_ID ?? adapter.id });
     return { run_id: runId, thread_id: adapter.threadId, diagnostics: runtime.getDiagnostics(),
       quests: snapshot.quests.map(quest => ({ quest_id: quest.quest_id, status: quest.status, confidence: quest.outcome_confidence })),
-      totals: snapshot.world.progression_totals, observability: snapshot.observability };
+      totals: snapshot.world.progression_totals };
   } finally {
     if (stream !== input) stream.destroy();
     runtime.close();

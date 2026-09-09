@@ -125,7 +125,7 @@ test("Codex CLI adapter reports a failed terminal without exposing process outpu
   assert.equal(observer.events.at(-1).status, "failed");
 });
 
-test("Codex CLI adapter treats malformed JSONL as a blocking runtime failure", async () => {
+test("Codex CLI adapter interrupts observation on malformed JSONL without fabricating an outcome", async () => {
   const adapter = new CodexCliHarnessAdapter({
     prompt: "Run the task",
     runId: "run-codex-malformed",
@@ -134,10 +134,10 @@ test("Codex CLI adapter treats malformed JSONL as a blocking runtime failure", a
   });
   const observer = collectingObserver();
 
-  await adapter.start(observer);
+  await assert.rejects(adapter.start(observer), /reliable terminal evidence/);
 
-  assert.equal(observer.events.some((event) => event.type === "error.observed"), true);
-  assert.equal(observer.events.at(-1).type, "run.failed");
+  assert.equal(observer.events.some((event) => event.type === "run.failed"), false);
+  assert.equal(observer.events.some((event) => event.type === "run.completed"), false);
 });
 
 test("Codex-shaped JSONL reaches the persistent World State without Game Core changes", async (t) => {

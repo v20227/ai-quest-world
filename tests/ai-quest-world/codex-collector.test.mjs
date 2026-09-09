@@ -12,7 +12,7 @@ const input = lines => Readable.from(lines.map(line => `${typeof line === "strin
 const start = [{ type: "thread.started", thread_id: "public-thread" }, { type: "turn.started" }];
 const end = { type: "turn.completed", usage: { input_tokens: 10, output_tokens: 20 } };
 
-test("malformed lifecycle and known record shapes cannot grant a completion reward", async () => {
+test("malformed lifecycle and known record shapes interrupt observation without any settlement", async () => {
   const check = { type: "item.completed", item: { id: "check", type: "command_execution", command: "node --test", status: "completed", exit_code: 0, aggregated_output: "# tests 1\n# pass 1\n# fail 0" } };
   for (const lines of [
     [start[0], check, end],
@@ -24,22 +24,28 @@ test("malformed lifecycle and known record shapes cannot grant a completion rewa
     [...start, { type: "item.completed", item: { id: "file", type: "file_change", changes: [null] } }, check, end]
   ]) {
     const runtime = new PersistentWorldRuntime({ path: ":memory:" });
-    const snapshot = await runtime.runAdapter(new CodexCliHarnessAdapter({ input: input(lines), runId: "malformed" }));
-    assert.equal(snapshot.quests[0].status, "FAILED");
+    await assert.rejects(
+      runtime.runAdapter(new CodexCliHarnessAdapter({ input: input(lines), runId: "malformed" })),
+      /reliable terminal evidence/
+    );
+    const snapshot = runtime.getSnapshot();
+    assert.equal(snapshot.quests.every(quest => quest.status !== "COMPLETED"), true);
     assert.equal(snapshot.world.progression_totals.qualifying_quest_count, 0);
     assert.equal(snapshot.world.progression_totals.artifact_count, 0);
-    assert.equal(snapshot.progressions[0].semantic_credit.outcome_bonus, 0);
     runtime.close();
   }
 });
 
 test("passive collector never launches a process and requires a real terminal marker", async () => {
-  for (const [lines, terminal] of [[[], "run.failed"], [start, "run.failed"], [[...start, end], "run.completed"], [[...start, "invalid", end], "run.failed"], [[...start, { type: "turn.started" }, end], "run.failed"], [[...start, end, { type: "item.completed", item: {} }], "run.failed"]]) {
-    const events = [];
-    const adapter = new CodexCliHarnessAdapter({ input: input(lines), runId: "run", spawnProcess: () => { throw new Error("must not spawn"); } });
-    assert.equal(await adapter.detect(), true);
-    await adapter.start({ emit: async event => events.push(event) });
-    assert.equal(events.at(-1).type, terminal);
+  const events = [];
+  const adapter = new CodexCliHarnessAdapter({ input: input([...start, end]), runId: "run", spawnProcess: () => { throw new Error("must not spawn"); } });
+  assert.equal(await adapter.detect(), true);
+  await adapter.start({ emit: async event => events.push(event) });
+  assert.equal(events.at(-1).type, "run.completed");
+
+  for (const lines of [[], start, [...start, "invalid", end], [...start, { type: "turn.started" }, end], [...start, end, { type: "item.completed", item: {} }]]) {
+    const rejecting = new CodexCliHarnessAdapter({ input: input(lines), runId: "run", spawnProcess: () => { throw new Error("must not spawn"); } });
+    await assert.rejects(rejecting.start({ emit: async () => {} }), /reliable terminal evidence/);
   }
 });
 
@@ -71,16 +77,19 @@ test("collector requires stable execution identity and carries explicit recovery
   assert.equal(events[0].attributes.resumed_from_run_id, "original");
 });
 
-test("unknown or unfinished file changes cannot turn an existing file into rewarded evidence", async t => {
+test("unknown or unfinished file changes interrupt observation instead of becoming rewarded evidence", async t => {
   const root = await mkdtemp(join(tmpdir(), "ai-quest-world-file-status-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   await writeFile(join(root, "existing.md"), "An existing unchanged file\n");
   for (const status of [undefined, "in_progress", "unknown"]) {
     const item = { id: "file", type: "file_change", changes: [{ path: "existing.md", kind: "add" }], ...(status === undefined ? {} : { status }) };
     const runtime = new PersistentWorldRuntime({ path: ":memory:" });
-    const snapshot = await runtime.runAdapter(new CodexCliHarnessAdapter({ input: input([...start, { type: "item.completed", item }, end]), runId: "unknown-file", cwd: root, artifactPaths: true }));
-    assert.equal(snapshot.quests[0].status, "FAILED");
-    assert.equal(snapshot.quests[0].artifact_refs.length, 0);
+    await assert.rejects(
+      runtime.runAdapter(new CodexCliHarnessAdapter({ input: input([...start, { type: "item.completed", item }, end]), runId: "unknown-file", cwd: root, artifactPaths: true })),
+      /reliable terminal evidence/
+    );
+    const snapshot = runtime.getSnapshot();
+    assert.equal(snapshot.quests.every(quest => quest.status !== "COMPLETED"), true);
     assert.equal(snapshot.world.progression_totals.skill_xp, 0);
     assert.equal(snapshot.world.progression_totals.qualifying_quest_count, 0);
     assert.equal(snapshot.world.progression_totals.artifact_count, 0);

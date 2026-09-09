@@ -27,7 +27,11 @@ test("old-policy SQLite adds expedition on reopen without changing settlement, s
   assert.ok(upgraded.quests[0].expedition);
   assert.ok(upgraded.quests[0].settlement_snapshot.expedition);
   assert.ok(upgraded.progressions[0].quest_snapshot.expedition);
-  assert.deepEqual(withoutExpedition(upgraded), { world: legacy.world, quests: legacy.quests, progressions: legacy.progressions });
+  const { world: upgradedWorld, quests: upgradedQuests, progressions: upgradedProgressions } = withoutExpedition(upgraded);
+  assert.deepEqual(
+    { world: upgradedWorld, quests: upgradedQuests, progressions: upgradedProgressions },
+    { world: legacy.world, quests: legacy.quests, progressions: legacy.progressions }
+  );
   assert.equal(runtime.ingest(events).insertedCount, 0);
   assert.deepEqual(runtime.getSnapshot(), upgraded);
   runtime.close();
@@ -38,7 +42,12 @@ test("old-policy SQLite adds expedition on reopen without changing settlement, s
   assert.equal(projection.getMetadata().policy_version, PROJECTION_POLICY_VERSION);
   const invalid = structuredClone(current); invalid.quests[0].expedition.expedition_version = "invalid";
   assert.throws(() => projection.replace(invalid), /expedition/);
-  assert.deepEqual(projection.getSnapshot(), upgraded); projection.close();
+  const projectionSnapshot = projection.getSnapshot();
+  assert.deepEqual(
+    { world: projectionSnapshot.world, quests: projectionSnapshot.quests, progressions: projectionSnapshot.progressions },
+    { world: upgraded.world, quests: upgraded.quests, progressions: upgraded.progressions }
+  );
+  projection.close();
 });
 
 test("demo and persistent projections expose identical canonical and unverified expedition models", () => {
