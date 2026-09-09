@@ -51,7 +51,6 @@ const ui = {
   pauseReturns: false,
   returnTimer: null,
   panelMarkup: null,
-  returnFocus: null,
   artifactPreview: null,
   panelFocus: null
 };
@@ -162,19 +161,13 @@ function bindEvents() {
       return;
     }
 
-    if (event.target.closest("#enter-world") !== null || event.target.closest(".return-backdrop") !== null) {
+    if (event.target.closest("#settlement-card") !== null) {
       hideReturnOverlay();
     }
   });
 
   document.addEventListener("keydown", (event) => {
     if (document.querySelector(".display-drawer[open]")) return;
-    if (event.key === "Tab" && !refs.returnOverlay.classList.contains("is-hidden")) {
-      const buttons = [...refs.returnOverlay.querySelectorAll("button:not([hidden]):not(:disabled)")];
-      const current = buttons.indexOf(document.activeElement);
-      const next = current < 0 ? (event.shiftKey ? buttons.length - 1 : 0) : (current + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
-      event.preventDefault(); buttons[next]?.focus(); return;
-    }
     if (event.key === "Escape") {
       if (!refs.returnOverlay.classList.contains("is-hidden")) {
         hideReturnOverlay();
@@ -635,20 +628,38 @@ function loadingMarkup() {
   return `<div class="loading-stack" aria-label="加载中"><span></span><span></span><span></span></div>`;
 }
 
+const SETTLEMENT_BLESSINGS = [
+  "小小的努力，更好的自己。",
+  "每一点探索都留下足迹。",
+  "让创造温暖生活。",
+  "休息一下，再出发。",
+  "今天的努力，会长成明天的建筑。",
+  "世界因诚实而美。"
+];
+
+function blessingFor(seed) {
+  let hash = 0;
+  for (const character of seed) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return SETTLEMENT_BLESSINGS[hash % SETTLEMENT_BLESSINGS.length];
+}
+
 function showReturnOverlay(entry) {
   clearTimeout(ui.returnTimer);
-  if (refs.returnOverlay.classList.contains("is-hidden")) ui.returnFocus = document.activeElement;
   const grant = entry.collectionGrant ?? null;
   const income = ui.source === "live" && entry.quest_id ? ui.snapshot?.economy?.history.entries.find(item => item.type === "work_reward" && item.quest_id === entry.quest_id) : null;
+  const progression = ui.source === "live" && entry.quest_id ? ui.snapshot?.progressions?.find(item => item.quest_id === entry.quest_id) : null;
   ui.returnCollection = grant;
-  const highlights = (entry.highlights ?? []).slice(0, 3 - Number(Boolean(grant)) - Number(Boolean(income)));
+  const highlights = (entry.highlights ?? []).slice(0, 3);
   refs.returnTitle.textContent = entry.collectionOnly ? "新收藏已解锁。" : highlights.some((item) => item.kind === "milestone_unlocked")
     ? "世界因你而改变。"
     : "世界记住了你的努力。";
-  refs.returnSubtitle.textContent = entry.collectionOnly ? "你的首次已验证成果，留下了一份营地纪念。" : `${entry.title ?? "一次有意义的远征"}已回到营地。`;
+  refs.returnSubtitle.textContent = entry.collectionOnly ? "营地纪念已收入收藏。" : `${entry.title ?? "一次有意义的远征"}已回到营地。`;
   refs.returnHighlights.innerHTML = highlights.map((item) => `<div class="return-highlight"><span>${escapeHtml(returnHighlightLabel(item))}</span></div>`).join("");
-  if (grant) refs.returnHighlights.insertAdjacentHTML("beforeend", '<div class="return-highlight"><span>新收藏：验证纪念画 · 已自动收入收藏，尚未改变陈列</span></div>');
+  if (progression?.skill_xp > 0) refs.returnHighlights.insertAdjacentHTML("beforeend", `<div class="return-highlight"><span>记录成长 +${Number(progression.skill_xp)} 经验</span></div>`);
   if (income) refs.returnHighlights.insertAdjacentHTML("beforeend", `<div class="return-highlight"><span>本任务金币 +${Number(income.gold_delta)} · 已入账，可在工作钱包追溯</span></div>`);
+  if (grant) refs.returnHighlights.insertAdjacentHTML("beforeend", '<div class="return-highlight"><span>新收藏：验证纪念画 · 已收入收藏</span></div>');
+  const blessing = document.getElementById("return-blessing");
+  if (blessing) blessing.textContent = blessingFor(entry.return_id ?? entry.quest_id ?? "camp");
   let collectionButton = document.querySelector("#return-open-collection");
   if (!collectionButton) {
     collectionButton = document.createElement("button");
@@ -660,10 +671,7 @@ function showReturnOverlay(entry) {
   }
   collectionButton.hidden = !grant;
   refs.returnOverlay.classList.remove("is-hidden");
-  window.setTimeout(() => {
-    if (!refs.returnOverlay.classList.contains("is-hidden")) (grant ? collectionButton : refs.enterWorld).focus();
-  }, 0);
-  if (!grant) ui.returnTimer = window.setTimeout(hideReturnOverlay, 4500);
+  ui.returnTimer = window.setTimeout(hideReturnOverlay, 6000);
 }
 
 function hideReturnOverlay() {
@@ -672,8 +680,6 @@ function hideReturnOverlay() {
   ui.returnCollection = null;
   ui.activeReturn = null;
   refs.returnOverlay.classList.add("is-hidden");
-  if (ui.returnFocus?.isConnected) ui.returnFocus.focus({ preventScroll: true });
-  else refs.reloadButton.focus({ preventScroll: true });
   showNextReturn();
 }
 
