@@ -1,4 +1,5 @@
 import { isPlainRecord } from "../../packages/uarp/validation.mjs";
+import { validateExpedition } from "./expedition-types.mjs";
 import {
   SEMANTIC_DOMAINS,
   SEMANTIC_PHASES
@@ -73,6 +74,10 @@ export function validateQuest(value, path = "quest") {
   assertNonEmptyString(quest.title, `${path}.title`);
   assertAllowed(quest.status, `${path}.status`, QUEST_STATUSES);
   assertAllowed(quest.phase, `${path}.phase`, SEMANTIC_PHASES);
+  if (quest.expedition !== undefined) {
+    validateExpedition(quest.expedition);
+    assertExact(quest.expedition.current_phase, quest.phase, `${path}.expedition.current_phase`);
+  }
   if (quest.difficulty !== undefined) {
     const difficulty = assertPlainRecord(quest.difficulty, `${path}.difficulty`);
     for (const key of ["estimated", "observed"]) {

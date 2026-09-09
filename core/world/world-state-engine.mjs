@@ -15,6 +15,20 @@ const LIBRARY_DOMAINS = ["Research", "Planning"];
 const CREDIBLE_OUTCOMES = new Set(["VERIFIED", "SUPPORTED"]);
 const TERMINAL_EVENT_TYPES = new Set(["run.completed", "run.failed", "run.cancelled"]);
 
+export function describeWorldGoals(input) {
+  const world = validateWorldState(input);
+  return [
+    { goal_id: "gate_connected", target: "gate", achieved: world.gate.first_connected_at !== null, requirement: "observed_run_started", domains: [] },
+    { goal_id: "guild_restored", target: "guild", achieved: world.guild.state === "RESTORED", requirement: "credible_completion", domains: [] },
+    { goal_id: "workshop_unlocked", target: "workshop", achieved: world.workshop.state !== "LOCKED", requirement: "credible_domain_progress", domains: [...WORKSHOP_DOMAINS] },
+    { goal_id: "library_unlocked", target: "library", achieved: world.library.state !== "LOCKED", requirement: "credible_domain_progress", domains: [...LIBRARY_DOMAINS] },
+    ...["first_qualifying_completion", "first_artifact", "first_verified_outcome"].map(goalId => ({
+      goal_id: goalId, target: "chronicle", achieved: world.milestones.some(milestone => milestone.milestone_id === goalId),
+      requirement: goalId, domains: []
+    }))
+  ];
+}
+
 /**
  * Deterministic authoritative World State projection.
  * Runtime events control activity; resolved progression controls permanent

@@ -1,23 +1,52 @@
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { readFile, realpath, stat } from "node:fs/promises";
+import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createSimulatedRunSequence } from "../../adapters/first-harness/simulated-adapter.mjs";
-import { calculateProgression } from "../../core/game/progression-policy.mjs";
-import { QuestEngine } from "../../core/game/quest-engine.mjs";
-import { analyzeRuntimeEvents } from "../../core/semantic/semantic-engine.mjs";
-import { WorldStateEngine } from "../../core/world/world-state-engine.mjs";
+import { projectWorld } from "./project-world.mjs";
+import { withGameplay } from "./gameplay-snapshot.mjs";
 import { PersistentWorldRuntime } from "./world-runtime.mjs";
 import { isLocalRequest, readArtifact } from "./artifact-access.mjs";
+import { handleCollectionPlacement } from "./collection-api.mjs";
+import { handleEconomyRequest } from "./economy-api.mjs";
 
 const APP_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_FILES = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/index.html", ["index.html", "text/html; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
+  ["/guild-desktop.css", ["guild-desktop.css", "text/css; charset=utf-8"]],
   ["/app.mjs", ["app.mjs", "text/javascript; charset=utf-8"]],
-  ["/view-state.mjs", ["view-state.mjs", "text/javascript; charset=utf-8"]]
+  ["/collection-view.mjs", ["collection-view.mjs", "text/javascript; charset=utf-8"]],
+  ["/collection-notices.mjs", ["collection-notices.mjs", "text/javascript; charset=utf-8"]],
+  ["/economy-view.mjs", ["economy-view.mjs", "text/javascript; charset=utf-8"]],
+  ["/capture-view.mjs", ["capture-view.mjs", "text/javascript; charset=utf-8"]],
+  ["/expedition-view.mjs", ["expedition-view.mjs", "text/javascript; charset=utf-8"]],
+  ["/view-state.mjs", ["view-state.mjs", "text/javascript; charset=utf-8"]],
+  ["/guild-scene.mjs", ["guild-scene.mjs", "text/javascript; charset=utf-8"]],
+  ["/scene-assets.mjs", ["scene-assets.mjs", "text/javascript; charset=utf-8"]],
+  ["/pixel-composition.mjs", ["pixel-composition.mjs", "text/javascript; charset=utf-8"]],
+  ["/asset-preview.mjs", ["asset-preview.mjs", "text/javascript; charset=utf-8"]],
+  ["/character-preferences.mjs", ["character-preferences.mjs", "text/javascript; charset=utf-8"]],
+  ["/scene-motion.mjs", ["scene-motion.mjs", "text/javascript; charset=utf-8"]],
+  ["/scene-frames.mjs", ["scene-frames.mjs", "text/javascript; charset=utf-8"]],
+  ["/scene-objects.mjs", ["scene-objects.mjs", "text/javascript; charset=utf-8"]],
+  ["/workshop-display.mjs", ["workshop-display.mjs", "text/javascript; charset=utf-8"]],
+  ["/command-hall", ["command-hall.html", "text/html; charset=utf-8"]],
+  ["/command-hall.html", ["command-hall.html", "text/html; charset=utf-8"]],
+  ["/command-hall.css", ["command-hall.css", "text/css; charset=utf-8"]],
+  ["/command-hall.mjs", ["command-hall.mjs", "text/javascript; charset=utf-8"]],
+  ["/command-hall-fixtures.mjs", ["command-hall-fixtures.mjs", "text/javascript; charset=utf-8"]]
+]);
+
+const ASSET_DIRECTORY = resolve(APP_DIRECTORY, "../../assets");
+const ASSET_CONTENT_TYPES = new Map([
+  [".png", "image/png"],
+  [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
+  [".webp", "image/webp"],
+  [".svg", "image/svg+xml"]
 ]);
 
 /**
@@ -43,27 +72,8 @@ export function buildDemoSnapshot({ mode = "canonical" } = {}) {
       "run.completed"
     ].includes(event.type))
     : fullEvents;
-  const semantic = analyzeRuntimeEvents(events);
-  const questEngine = new QuestEngine();
-  questEngine.process(events, semantic.records);
-  const quests = questEngine.getQuests();
-  const progressions = quests.map((quest) => calculateProgression(
-    quest,
-    semantic.records.filter((record) => record.root_run_id === quest.root_run_id)
-  ));
-  const worldEngine = new WorldStateEngine();
-  for (const event of events) {
-    worldEngine.ingest(event);
-  }
-  for (const progression of progressions) {
-    worldEngine.applyProgression(progression);
-  }
-
-  return {
-    world: worldEngine.getState(),
-    quests,
-    progressions
-  };
+  const { world, quests, progressions } = projectWorld(events);
+  return { world, quests, progressions };
 }
 
 /** @param {{runtime?: PersistentWorldRuntime|null}=} options @returns {import("node:http").Server} */
@@ -108,6 +118,15 @@ export function startWorldWebServer({
 }
 
 async function handleRequest(request, response, runtime, artifactRoot) {
+  const economyUrl = new URL(request.url ?? "/", "http://localhost");
+  if (["/api/economy/command", "/api/economy/history"].includes(economyUrl.pathname)) {
+    await handleEconomyRequest(request, response, runtime, economyUrl);
+    return;
+  }
+  if (request.method === "POST" && new URL(request.url ?? "/", "http://localhost").pathname === "/api/collection/placement") {
+    await handleCollectionPlacement(request, response, runtime);
+    return;
+  }
   if (request.method !== "GET") {
     response.writeHead(405, { allow: "GET" });
     response.end();
@@ -138,7 +157,7 @@ async function handleRequest(request, response, runtime, artifactRoot) {
     }
     const snapshot = buildDemoSnapshot({ mode });
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-    response.end(JSON.stringify(snapshot));
+    response.end(JSON.stringify(withGameplay(snapshot)));
     return;
   }
 
@@ -149,7 +168,55 @@ async function handleRequest(request, response, runtime, artifactRoot) {
       return;
     }
     response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-    response.end(JSON.stringify({ ...runtime.getSnapshot({ at: new Date().toISOString() }), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
+    response.end(JSON.stringify({ ...withGameplay(runtime.getSnapshot({ at: new Date().toISOString() })), display_namespace: runtime.getDisplayNamespace(), capabilities: { artifact_view: artifactRoot !== null }, diagnostics: runtime.getDiagnostics() }));
+    return;
+  }
+
+  if (requestUrl.pathname.startsWith("/assets/")) {
+    let relativePath;
+    try {
+      relativePath = decodeURIComponent(requestUrl.pathname.slice("/assets/".length));
+    } catch {
+      response.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Invalid asset path");
+      return;
+    }
+    const pathSegments = relativePath.split(/[\\/]+/);
+    if (pathSegments.some((segment) => segment.startsWith("."))) {
+      response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+    const requestedPath = resolve(ASSET_DIRECTORY, relativePath);
+    const requestedExtension = extname(requestedPath).toLowerCase();
+    if (!ASSET_CONTENT_TYPES.has(requestedExtension)) {
+      response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+    let assetRootPath;
+    let assetPath;
+    try {
+      assetRootPath = await realpath(ASSET_DIRECTORY);
+      assetPath = await realpath(requestedPath);
+      if (assetPath !== assetRootPath && !assetPath.startsWith(`${assetRootPath}${sep}`)) {
+        throw new Error("Asset path escaped the configured root");
+      }
+      if (!(await stat(assetPath)).isFile()) {
+        throw new Error("Asset path is not a file");
+      }
+    } catch {
+      response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+    const content = await readFile(assetPath);
+    response.writeHead(200, {
+      "content-type": ASSET_CONTENT_TYPES.get(extname(assetPath).toLowerCase()),
+      "cache-control": "public, max-age=300",
+      "cross-origin-resource-policy": "same-origin"
+    });
+    response.end(content);
     return;
   }
 

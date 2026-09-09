@@ -1,5 +1,7 @@
 # AI Quest World v0.1
 
+Source snapshot: `0.100.32`
+
 AI Quest World is a local-first gamified observability layer for AI Agent harnesses.
 
 The product watches **observable runtime work** from an Agent Harness, normalizes it into a universal factual protocol, interprets meaningful work phases, resolves progression through a deterministic game core, persists the result locally, and renders a persistent pixel world.

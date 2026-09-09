@@ -4,6 +4,15 @@ import { SqliteEventStore } from "../../storage/sqlite/index.mjs";
 import { SqliteProjectionStore } from "../../storage/sqlite/projection-store.mjs";
 import { projectWorld, PROJECTION_POLICY_VERSION } from "./project-world.mjs";
 import { worldAtTime } from "../../core/world/world-view.mjs";
+import { createHash, randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
+import { SqliteObservationStore } from "../../storage/sqlite/observation-store.mjs";
+import { captureAdapter } from "../../observer/capture-session.mjs";
+import { describeRuntimeIdentities } from "../../observer/runtime-identities.mjs";
+import { milestoneCollectibles } from "../../core/game/collection-rewards.mjs";
+import { SqliteCollectionStore } from "../../storage/sqlite/collection-store.mjs";
+import { SqliteEconomyStore } from "../../storage/sqlite/economy-store.mjs";
+import { workGoldGrants } from "../../core/game/economy-policy.mjs";
 
 /**
  * Local projection runtime for the Web app. It owns orchestration only: the
@@ -16,6 +25,13 @@ export class PersistentWorldRuntime {
   #memory;
   #observer;
   #closed = false;
+  #displayNamespace;
+  #observationStore;
+  #activeSessions = new Set();
+  #identityCache = null;
+  #identityEventCount = -1;
+  #collectionStore;
+  #economyStore;
 
   /** @param {{path?: string}=} options */
   constructor({ path = "storage/sqlite/ai-quest-world.sqlite" } = {}) {
@@ -24,11 +40,18 @@ export class PersistentWorldRuntime {
     }
 
     this.#eventStore = new SqliteEventStore({ path });
+    this.#displayNamespace = path === ":memory:" ? randomUUID() : createHash("sha256").update(realpathSync(path)).digest("hex");
     this.#memory = path === ":memory:";
     try {
       this.#projectionStore = new SqliteProjectionStore({ path });
+      this.#observationStore = new SqliteObservationStore({ path });
+      this.#collectionStore = new SqliteCollectionStore({ path });
+      this.#economyStore = new SqliteEconomyStore({ path });
     } catch (error) {
       this.#eventStore.close();
+      this.#projectionStore?.close();
+      this.#observationStore?.close();
+      this.#collectionStore?.close();
       throw error;
     }
 
@@ -81,10 +104,11 @@ export class PersistentWorldRuntime {
    * @param {import("../../packages/adapter-core/contracts.mjs").HarnessAdapter} adapter
    * @returns {Promise<ReturnType<PersistentWorldRuntime["getSnapshot"]>>}
    */
-  async runAdapter(adapter) {
+  async runAdapter(adapter, { connectionId = adapter.id } = {}) {
     this.#assertOpen();
     assertHarnessAdapter(adapter);
-    await adapter.start(this.#observer);
+    await captureAdapter({ adapter, observer: this.#observer, store: this.#observationStore,
+      connectionId, activeSessions: this.#activeSessions });
     return this.getSnapshot();
   }
 
@@ -94,7 +118,44 @@ export class PersistentWorldRuntime {
     this.#materialize();
     const snapshot = this.#projectionStore.getSnapshot();
     if (at !== undefined) snapshot.world = worldAtTime(snapshot.world, at, snapshot.quests);
+    snapshot.observability = this.getObservability();
+    this.#collectionStore.record(milestoneCollectibles(snapshot.world));
+    snapshot.collection = this.#collectionStore.snapshot();
+    this.#economyStore.recordWork(workGoldGrants(snapshot.progressions));
+    snapshot.economy = this.#economyStore.snapshot();
     return snapshot;
+  }
+
+  placeCollectible(selection) {
+    this.#assertOpen();
+    this.getSnapshot();
+    return this.#collectionStore.place(selection);
+  }
+
+  executeEconomyCommand(command) {
+    this.getSnapshot();
+    return this.#economyStore.execute(command);
+  }
+
+  getEconomyHistory(options) {
+    this.#assertOpen();
+    return this.#economyStore.history(options);
+  }
+
+  getObservability() {
+    this.#assertOpen();
+    const count = this.#eventStore.count();
+    if (count !== this.#identityEventCount) {
+      const events = this.#eventStore.list();
+      this.#identityCache = describeRuntimeIdentities(events);
+      this.#identityEventCount = events.length;
+    }
+    return {
+      version: "0.1",
+      sessions: this.#observationStore.list(),
+      session_limit: 100,
+      identities: structuredClone(this.#identityCache)
+    };
   }
 
   /** @returns {{event_count: number, quest_count: number, progression_count: number, applied_input_count: number}} */
@@ -109,14 +170,27 @@ export class PersistentWorldRuntime {
     };
   }
 
+  getDisplayNamespace() {
+    this.#assertOpen();
+    return this.#displayNamespace;
+  }
+
   /** Close all local repositories. Calling close more than once is safe. */
   close() {
     if (this.#closed) {
       return;
     }
     this.#closed = true;
-    this.#eventStore.close();
-    this.#projectionStore.close();
+    try {
+      for (const sessionId of this.#activeSessions) this.#observationStore.end(sessionId, "interrupted");
+    } finally {
+      this.#activeSessions.clear();
+      this.#observationStore.close();
+      this.#collectionStore.close();
+      this.#economyStore.close();
+      this.#eventStore.close();
+      this.#projectionStore.close();
+    }
   }
 
   #materialize() {

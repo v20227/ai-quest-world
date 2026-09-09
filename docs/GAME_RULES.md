@@ -356,14 +356,33 @@ Do not let an Agent's natural-language “done” alone produce Verified.
 
 ## 15. Reward model
 
-v0.1 has four reward families:
+The original work-result reward families remain:
 
 1. Skill XP
 2. Domain Progress
 3. Artifact/Loot reference
 4. Milestone
 
-No Gold/economy/shop in v0.1.
+The accepted scope now also includes local Gold, a fixed-price shop, pet hatching and feeding. Gold is a separate non-negative integer balance, not converted from XP or raw tool/token counts. The concrete grant amounts and prices must be defined together before economy implementation.
+
+### Local economy and companion rules
+
+- Qualifying Quest outcomes may produce a uniquely identified Gold grant; child runs, retries and event replay must not multiply it.
+- Every purchase must atomically validate the authoritative price and balance, debit Gold and deliver inventory. Repeating a command ID returns the same result rather than spending again; reusing it with a different payload is rejected.
+- Hatching consumes an owned egg and creates one pet in the same transaction. Initial design uses explicit species rather than random paid outcomes.
+- Feeding consumes an owned food item and updates pet growth atomically. Initial design has no hunger decay, death or inactivity punishment.
+- Pet selection changes presentation only. Gold, pets and food do not change Harness capabilities or grant fabricated artifact evidence.
+- Player actions and their results persist separately from rebuildable work-event projections, so replay cannot erase purchases or resurrect consumed inventory.
+- Initial policy is economy-1 below. Any later price or reward change needs a new explicit policy; existing receipts are preserved.
+
+### Economy-1
+
+- A frozen RESOLVED, COMPLETED Quest progression grants20 Gold when VERIFIED,12 when SUPPORTED, otherwise0. Deduplicate by root goal identity, independently of policy version; replay or adding child runs never issues another grant for that root. The existing frozen first settlement determines the reward, without a second bonus for later evidence updates.
+- Start balance0; existing eligible historical settlements backfill once, preserving source Quest and event time with a historical marker in the ledger. No login stipend or duration/call-count income.
+- Signal companion egg costs40; only one egg or hatched companion of this initial species may be owned. Hatching consumes one egg immediately and deterministically creates the companion, without automatically selecting it.
+- Focus apple costs4 and adds5 growth. Preferred research biscuit costs8 and adds12. Food quantities are integer1..20. Growth is capped100, with stages at0,25,60,100; no decay. Reject feeding at full growth and quantities beyond the servings needed to reach100 before consuming food. The final required serving may be partially effective, and the UI previews the actual increase.
+- The initial companion is decorative and its growth is from food. Display alongside work does not claim it participated in an observed Harness run. No combat effects, free training loop, paid currency, random draw or mounts.
+- Wallet records retain source Quest, confidence, amount, resulting balance and times. Player receipts retain command identity, action, consumed quantities, currency/growth changes and policy version.
 
 ### Skill XP
 

@@ -108,6 +108,7 @@ test("persistent Web endpoint survives restart and replays events idempotently",
   const firstResponse = await fetch(`http://127.0.0.1:${firstAddress.port}/api/world`);
   assert.equal(firstResponse.status, 200);
   const firstPayload = await firstResponse.json();
+  assert.match(firstPayload.display_namespace, /^[a-f0-9]{64}$/);
   assert.equal(firstPayload.diagnostics.event_count, events.length);
   assert.equal(firstPayload.diagnostics.quest_count, 1);
   assert.equal(firstPayload.diagnostics.progression_count, 1);
@@ -115,6 +116,7 @@ test("persistent Web endpoint survives restart and replays events idempotently",
 
   const reopenedRuntime = new PersistentWorldRuntime({ path });
   t.after(() => reopenedRuntime.close());
+  assert.equal(reopenedRuntime.getDisplayNamespace(), firstPayload.display_namespace);
   const replay = reopenedRuntime.ingest(events);
   assert.equal(replay.insertedCount, 0);
   assert.equal(replay.duplicateCount, events.length);

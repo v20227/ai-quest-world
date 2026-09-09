@@ -2,7 +2,7 @@
  * @typedef {import("node:sqlite").DatabaseSync} DatabaseSync
  */
 
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 8;
 
 /** @type {ReadonlyMap<number, (database: DatabaseSync) => void>} */
 const MIGRATIONS = new Map([
@@ -76,6 +76,51 @@ const MIGRATIONS = new Map([
         event_count INTEGER NOT NULL CHECK (event_count >= 0)
       );
     `);
+  }],
+  [5, (database) => {
+    database.exec(`
+      CREATE TABLE observation_sessions (
+        session_id TEXT PRIMARY KEY,
+        connection_id TEXT NOT NULL,
+        adapter_id TEXT NOT NULL,
+        capabilities_json TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('observing', 'ended', 'error', 'interrupted')),
+        started_at TEXT NOT NULL,
+        heartbeat_at TEXT NOT NULL,
+        last_event_at TEXT,
+        ended_at TEXT,
+        error_code TEXT
+      );
+      CREATE INDEX idx_observation_sessions_connection
+        ON observation_sessions(connection_id, started_at);
+    `);
+  }],
+  [6, (database) => {
+    database.exec(`
+      CREATE TABLE collection_grants (
+        grant_id TEXT PRIMARY KEY,
+        item_id TEXT NOT NULL UNIQUE,
+        grant_json TEXT NOT NULL
+      );
+      CREATE TABLE collection_display (
+        slot TEXT PRIMARY KEY CHECK(slot = 'camp-memento'),
+        item_id TEXT REFERENCES collection_grants(item_id),
+        revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0)
+      );
+      INSERT INTO collection_display(slot) VALUES ('camp-memento');
+    `);
+  }],
+  [7, (database) => {
+    database.exec(`
+      CREATE TABLE economy_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), state_json TEXT NOT NULL);
+      CREATE TABLE economy_work_grants (root_run_id TEXT PRIMARY KEY, grant_json TEXT NOT NULL);
+      CREATE TABLE economy_commands (command_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL, receipt_json TEXT NOT NULL);
+      CREATE TABLE economy_ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT, entry_json TEXT NOT NULL);
+    `);
+  }],
+  [8, (database) => {
+    database.exec(`ALTER TABLE observation_sessions ADD COLUMN last_run_id TEXT;
+      ALTER TABLE observation_sessions ADD COLUMN last_event_id TEXT;`);
   }]
 ]);
 
