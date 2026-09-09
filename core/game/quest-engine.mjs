@@ -99,7 +99,7 @@ export class QuestEngine {
       quest.difficulty.estimated = estimateDifficulty(state.difficultyBasis);
     }
 
-    const outcome = classifyOutcome(state.events, { rootRunId: state.driver });
+    const outcome = classifyOutcome(state.events, { rootRunId: state.driver, primaryDomain: quest.primary_domain });
     quest.validation_summary = outcome.validation_summary;
     quest.artifact_refs = outcome.artifact_refs;
 

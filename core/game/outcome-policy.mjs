@@ -9,7 +9,7 @@ import { OUTCOME_CONFIDENCES } from "./quest-types.mjs";
  * @param {{rootRunId?: string}=} options
  * @returns {{confidence: string|null, terminal_type: string|null, validation_summary: {attempted: boolean, success_count: number, failure_count: number, latest_kind: string|null, latest_status: string|null, latest_passed: number|null, latest_failed: number|null, latest_total: number|null, latest_blockers: number|null}, artifact_refs: Array<Record<string, unknown>>, has_durable_artifact: boolean, evidence_ref_count: number}}
  */
-export function classifyOutcome(inputs, { rootRunId } = {}) {
+export function classifyOutcome(inputs, { rootRunId, primaryDomain } = {}) {
   if (!Array.isArray(inputs)) {
     throw new TypeError("outcome events must be an array");
   }
@@ -60,7 +60,8 @@ export function classifyOutcome(inputs, { rootRunId } = {}) {
     artifactRefs,
     evidenceRefCount,
     [...latestValidations.values()],
-    lastChange
+    lastChange,
+    primaryDomain
   );
 
   return {
@@ -154,7 +155,13 @@ function mergeArtifactReference(previous, current) {
   return merged;
 }
 
-function classifyTerminalConfidence(terminalEvent, validation, artifactRefs, evidenceRefCount, latestValidations, lastChange) {
+// REWARD_RULES_SPEC §3.1: 非代码领域的「发表即验证」路径。
+// 创作/研究/规划的成果以真实发表动作（发布/提交/交付）为最高证据，
+// 不要求测试存在——但仍然要求持久化产物与真实引用，缺一不可。
+const PUBLISH_RELATIONS = new Set(["published", "committed", "submitted", "delivered"]);
+const PUBLISH_VERIFIED_DOMAINS = new Set(["Research", "Planning", "Creation"]);
+
+function classifyTerminalConfidence(terminalEvent, validation, artifactRefs, evidenceRefCount, latestValidations, lastChange, primaryDomain) {
   if (terminalEvent === null) {
     return null;
   }
@@ -176,6 +183,14 @@ function classifyTerminalConfidence(terminalEvent, validation, artifactRefs, evi
     (artifact) => artifact.durable === true && artifact.has_reference === true
   );
   if (hasSuccessfulValidation && hasDurableArtifact) {
+    return "VERIFIED";
+  }
+  // §3.1：创作/研究/规划域——持久产物 + 真实发表动作 = VERIFIED（S-4：缺一降级，绝不猜测）。
+  if (PUBLISH_VERIFIED_DOMAINS.has(primaryDomain) && hasDurableArtifact
+    && [...artifactRefs.values()].some(
+      (artifact) => artifact.durable === true && artifact.has_reference === true
+        && PUBLISH_RELATIONS.has(artifact.relation)
+    )) {
     return "VERIFIED";
   }
   if (hasSuccessfulValidation || hasDurableArtifact || evidenceRefCount > 0) {

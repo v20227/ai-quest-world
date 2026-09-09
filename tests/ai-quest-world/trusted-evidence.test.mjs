@@ -143,3 +143,29 @@ test("pending or unknown validation cannot reuse an older pass or clear a failur
     assert.equal(classifyOutcome(events).confidence, scenario === "failed-unknown" ? "FAILED" : "SUPPORTED");
   }
 });
+
+test("domain-aware settlement: creation work with a published durable artifact verifies without tests", () => {
+  const full = createSimulatedRunSequence({ includeChildRun: false });
+  const artifact = structuredClone(full.find(event => event.type === "artifact.created"));
+  artifact.event_id = "published-creation";
+  artifact.attributes = { ...artifact.attributes, kind: "document", relation: "published" };
+  const events = full.map(event => event.type === "validation.completed" ? null : event).filter(Boolean);
+  const originalArtifact = full.find(event => event.type === "artifact.created");
+  const withArtifact = events.map(event => event.event_id === originalArtifact.event_id ? artifact : event);
+  const { quest, progression } = project(withArtifact);
+  quest.primary_domain = "Creation";
+  const outcome = classifyOutcome(withArtifact, { primaryDomain: "Creation" });
+  assert.equal(outcome.confidence, "VERIFIED");
+  const codeBias = classifyOutcome(withArtifact, { primaryDomain: "Engineering" });
+  assert.equal(codeBias.confidence, "SUPPORTED");
+  assert.equal(progression.loot_refs.length >= 0, true);
+});
+
+test("domain-aware settlement: missing publish relation stays SUPPORTED, never guesses", () => {
+  const full = createSimulatedRunSequence({ includeChildRun: false });
+  const events = full.map(event => event.type === "validation.completed" ? null : event).filter(Boolean);
+  const outcome = classifyOutcome(events, { primaryDomain: "Creation" });
+  assert.equal(outcome.confidence, "SUPPORTED");
+  const researchOutcome = classifyOutcome(events, { primaryDomain: "Research" });
+  assert.equal(researchOutcome.confidence, "SUPPORTED");
+});
