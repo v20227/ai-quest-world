@@ -19,10 +19,13 @@ Read these documents before making architectural or gameplay changes:
 7. `docs/V0.1_SCOPE.md`
 8. `docs/IMPLEMENTATION_PLAN.md`
 9. `docs/TEST_AND_ACCEPTANCE.md`
+10. `docs/REWARD_RULES_SPEC.md`
+11. `docs/ADAPTER_GUIDE.md`
+12. `docs/OBSERVER_FEASIBILITY.md`
 
 If documents conflict, use this priority order:
 
-`AGENTS.md` → `V0.1_SCOPE.md` → `ARCHITECTURE.md` → `UARP_SPEC.md` / `GAME_RULES.md` → presentation details.
+`AGENTS.md` → `V0.1_SCOPE.md` → `ARCHITECTURE.md` → `UARP_SPEC.md` / `GAME_RULES.md` / `REWARD_RULES_SPEC.md` → presentation details.
 
 ## Non-negotiable architecture rules
 

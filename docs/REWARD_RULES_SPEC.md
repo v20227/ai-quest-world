@@ -2,6 +2,12 @@
 
 ## 0. Status and scope
 
+**Version: post-v0.1 (v0.2 candidate).** `V0.1_SCOPE.md` explicitly excludes
+Gold/economy/shop/pets. This document defines their **future** rules only —
+§4 must not be implemented until V0.1_SCOPE.md is revised. The binding design
+axioms for everything here live in `GAME_RULES.md` §26 (A1 provenance,
+A2 honesty over victory, A3 display not power, A4 ritual not dailies).
+
 This spec defines the three rule layers that sit between observation and play:
 
 1. **Process rules** — which observed facts only drive live companionship (animation, HUD), never rewards.
@@ -152,7 +158,9 @@ New (economy module):
 | Milestone items | first-verified-delivery, first domain unlock, tier threshold (existing §15 Milestone family) | one-time flags |
 
 Anti-model: no gold for tokens/events/reads; no purchasable XP; no purchasable
-verification (confirmation cannot be bought or automated).
+verification (confirmation cannot be bought or automated); shop catalog is
+display-only per A3 (decorations, pet supplies, building accessories) — no
+efficiency or stat items ever.
 
 ### 4.2 Economy bounds (Habitica-calibrated anchors)
 
@@ -168,10 +176,13 @@ per-task-tick:
 - Daily gold cap optional but recommended (e.g. 120/day) to survive future
   quest-volume growth.
 
-### 4.3 Deterministic drops (replay-safe)
+### 4.3 Work-derived drops (A1 provenance, replay-safe)
 
 Habitica drops are random per task tick; AI Quest World replaces this with a
-single seeded roll per settlement so replays cannot mint items:
+single seeded roll per settlement so replays cannot mint items. But the seed
+only decides **whether** a roll succeeds and **which slot** it lands in —
+**what the item is derives from the settled quest's real properties** (A1:
+nothing without an origin):
 
 ```
 seed        = SHA-256(quest_id + sorted(settlement.event_ids))
@@ -179,17 +190,23 @@ roll        = deterministicRNG(seed)   // one roll per settled quest
 chance      = 0.30 × outcome_confidence_factor
               // VERIFIED 1.0, SUPPORTED 0.75, UNVERIFIED 0.4 (reuse OUTCOME_MULTIPLIERS)
 difficulty_bonus = +0.03 × (difficulty_estimate − 1)   // from difficulty-policy.mjs
-daily_cap   = 3 drops/day (first drop guarantee: if inventory has zero eggs and zero potions, next eligible settlement drops one — Habitica firstDrops pattern)
+daily_cap   = 3 drops/day (first-drop guarantee: if inventory has zero eggs and zero
+              potions, next eligible settlement drops one — Habitica firstDrops pattern)
 ```
 
-On a successful roll, item type distribution mirrors Habitica
-(`fns/randomDrop.js`):
+On a successful roll, the seeded roll picks a slot with Habitica's
+distribution (`fns/randomDrop.js`): Food 40% / Egg 30% / Hatching potion 30%.
+The slot's **content** is then derived, not rolled:
 
-| Item | Chance | Notes |
-| --- | --- | --- |
-| Food | 40% | 5 flavors, each keyed to one potion family (favorite) |
-| Egg | 30% | 9+ standard species; domain-themed species optional later |
-| Hatching potion | 30% | rarity tiers within: common 40%, uncommon 30%, rare 20%, very-rare 10% (Golden) |
+| Slot | Content derivation (all deterministic) |
+| --- | --- |
+| Food | flavor rotates per quest primary domain (favorite-matching per §4.4 preserved) |
+| Egg | species derived from quest primary domain (domain-themed species sets) |
+| Hatching potion | rarity derived from observed difficulty: 1–2 → common, 3 → uncommon, 4 → rare, 5 → very-rare |
+
+Luck decides the slot; the work decides the substance. Every granted item
+records `source_quest_id` in the ledger (§4.5), so any item can be traced to
+the real quest that produced it.
 
 Rules:
 
@@ -208,6 +225,10 @@ language instead of life-sim language:
   starts at growth 5; duplicate pet keys are rejected (idempotent).
   - Collection achievements mirror Habitica's set logic: same-color set,
     same-species set, full color collection.
+- **Provenance (A1)**: every pet records the `source_quest_id` of the quest
+  whose egg hatched it and keeps a visible origin tag ("born from
+  *<quest title>*"). Pets are fictional game objects — but their existence
+  must trace to real work.
 - **Feed**: favorite food (matches pet's potion family) +5 growth; other food
   +2; overfeeding past 50 rejected.
 - **Mature**: at growth ≥ 50 the pet becomes a world companion/mount
@@ -226,6 +247,19 @@ language instead of life-sim language:
 - Wallet, inventory, pets, and shop are read models rebuilt from the ledger;
   the ledger is the source of truth.
 
+### 4.6 Failure tells a story (A2)
+
+- FAILED/CANCELLED quests produce encounter/scar records in the quest
+  timeline and may add a bounded world "scar" prop (capped, e.g. latest 10) —
+  never penalties, and never fabricated success.
+- UNVERIFIED artifacts appear as "unconfirmed manuscripts": visible,
+  inspectable, not rewarded. A later lazy confirmation (§3.2) may upgrade
+  them, but the confirmation badge stays visually distinct from
+  system-verified evidence forever (A2).
+- Recovery after failure earns Debugging/Recovery semantic credit within the
+  existing progression caps. The world remembers the struggle as story,
+  not as score.
+
 ## 5. Integration notes
 
 - `semantic-types.mjs` stays game-free; FORBIDDEN_GAME_KEYS still applies.
@@ -240,8 +274,8 @@ language instead of life-sim language:
 
 ## 6. Open questions
 
-1. Domain-themed egg species (Research egg vs Engineering egg) — cute but adds
-   content surface; decide after the first economy slice is playable.
+1. ~~Domain-themed egg species~~ — resolved by A1/§4.3: species derives from
+   quest primary domain. Remaining: how many species per domain set to author.
 2. Whether UNVERIFIED-with-confirmation quests should roll drops (currently:
    yes, at ×0.4 chance) — revisit after observing confirm-rate in practice.
 3. Pet visual language: reuse pixel-world companion sprites vs abstract

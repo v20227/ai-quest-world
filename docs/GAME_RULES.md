@@ -601,3 +601,39 @@ Example future direction:
 - `Deep Investigation` → stronger pre-implementation investigation phase
 
 But core AI capabilities must never be artificially locked behind game levels. Growth should improve composition/automation/usability, not disable normal AI functionality for new users.
+
+## 26. Product axioms (post-v0.1 direction)
+
+These axioms govern every future gameplay system (economy, pets, shop,
+collection, Ritual). They are binding for `docs/REWARD_RULES_SPEC.md` and any
+post-v0.1 gameplay implementation. They do not change v0.1 scope.
+
+### A1 — Provenance: nothing without an origin
+
+Everything visible in the world must trace back to real observed work.
+
+- No decoration, item, pet, or world change exists without a real origin.
+- Item themes, species, and rarity derive from real quest properties
+  (domain, difficulty, outcome), not from uniform luck.
+- Fantasy presentation, factual state — also for rewards.
+
+### A2 — Honesty over victory
+
+- Successful work builds the world; failed work creates stories
+  (encounters, scars, unconfirmed manuscripts) — never penalties, and never
+  fabricated success.
+- Player-confirmed outcomes must remain visually distinguishable from
+  system-verified outcomes forever.
+- Real work is irregular; the world values honesty, not winning.
+
+### A3 — Display, not power
+
+- Currency and shop items serve display, collection, and care
+  (decorations, pet supplies, building accessories).
+- No purchasable advantage, no purchasable verification, no stat inflation
+  from spending. Coins end at display, never at efficiency.
+
+### A4 — Ritual, not dailies
+
+- Retention comes from recognizing real recurring work patterns, never from
+  forced login pressure, streak guilt, or mandatory daily tasks.
