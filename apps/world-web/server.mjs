@@ -96,6 +96,73 @@ export function buildDemoSnapshot({ mode = "canonical" } = {}) {
   }
 }
 
+const CONFIRM_DAILY_LIMIT = 8;
+const confirmDailyState = { date: new Date().toISOString().slice(0, 10), used: 0 };
+
+async function handleQuestConfirm(request, response, runtime) {
+  if (runtime === null) {
+    response.writeHead(503, { "content-type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({ error: "Persistent World runtime is not configured" }));
+    return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (confirmDailyState.date !== today) {
+    confirmDailyState.date = today;
+    confirmDailyState.used = 0;
+  }
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  let questId = null;
+  try {
+    const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+    if (typeof body.quest_id === "string" && body.quest_id.trim()) questId = body.quest_id.trim();
+  } catch { /* invalid body handled below */ }
+  if (questId === null) {
+    response.writeHead(400, { "content-type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({ error: "quest_id is required" }));
+    return;
+  }
+  const quest = runtime.getSnapshot().quests.find(item => item.quest_id === questId);
+  if (quest === undefined) {
+    response.writeHead(404, { "content-type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({ error: "quest not found" }));
+    return;
+  }
+  if (quest.status !== "COMPLETED" || quest.outcome_confidence !== "UNVERIFIED"
+    || quest.event_ids.length < 3) {
+    response.writeHead(409, { "content-type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({ error: "quest is not confirmable (needs COMPLETED + UNVERIFIED + meaningful work beyond run lifecycle)" }));
+    return;
+  }
+  if (confirmDailyState.used >= CONFIRM_DAILY_LIMIT) {
+    response.writeHead(429, { "content-type": "application/json; charset=utf-8" });
+    response.end(JSON.stringify({ error: "今日确认次数已达上限（8 次/天）。" }));
+    return;
+  }
+  const dateKey = today.replace(/-/g, "");
+  const event = {
+    uarp_version: "0.1",
+    event_id: `user-confirm:${questId}:${dateKey}`,
+    timestamp: new Date().toISOString(),
+    source: { adapter_id: "ai-quest-world", adapter_version: "0.1.0", harness_family: "local-user" },
+    context: { run_id: quest.root_run_id, agent_id: "user" },
+    type: "outcome.reported",
+    attributes: { native_outcome: "confirmed-by-user" },
+    privacy: { content_included: false, redaction_level: "strict" }
+  };
+  const result = runtime.ingest([event]);
+  confirmDailyState.used += 1;
+  const updated = runtime.getSnapshot().quests.find(item => item.quest_id === questId);
+  response.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+  response.end(JSON.stringify({
+    confirmed: true,
+    quest_id: questId,
+    outcome_confidence: updated?.outcome_confidence ?? null,
+    confirmations_used_today: confirmDailyState.used,
+    confirmations_limit: CONFIRM_DAILY_LIMIT
+  }));
+}
+
 /** @param {{runtime?: PersistentWorldRuntime|null}=} options @returns {import("node:http").Server} */
 export function createWorldWebServer({ runtime = null, artifactRoot = null } = {}) {
   return createServer(async (request, response) => {
@@ -156,6 +223,10 @@ async function handleRequest(request, response, runtime, artifactRoot) {
   }
   if (request.method === "POST" && new URL(request.url ?? "/", "http://localhost").pathname === "/api/collection/placement") {
     await handleCollectionPlacement(request, response, runtime);
+    return;
+  }
+  if (request.method === "POST" && new URL(request.url ?? "/", "http://localhost").pathname === "/api/quest/confirm") {
+    await handleQuestConfirm(request, response, runtime);
     return;
   }
   if (request.method !== "GET") {

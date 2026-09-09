@@ -9,7 +9,7 @@ import {
   QUEST_VERSION,
   validateQuest
 } from "./quest-types.mjs";
-import { classifyOutcome } from "./outcome-policy.mjs";
+import { classifyOutcome, PUBLISH_VERIFIED_DOMAINS } from "./outcome-policy.mjs";
 import { createDifficultyBasis, estimateDifficulty, updateDifficultyBasis } from "./difficulty-policy.mjs";
 import { buildExpedition } from "./expedition-policy.mjs";
 
@@ -117,6 +117,19 @@ export class QuestEngine {
       quest.difficulty.observed = quest.difficulty.estimated;
     } else if (!wasTerminal) {
       applyLifecycleProgress(quest, event, semantic);
+    }
+
+    // REWARD_RULES_SPEC §3.2 懒确认：玩家对有持久产物的 UNVERIFIED 任务一次性确认。
+    // 升一级：创作/研究/规划域带持久产物直达 VERIFIED，其余升 SUPPORTED。
+    // 限频在服务层；事件 id 幂等，重放不重复升级。
+    if (event.type === "outcome.reported" && event.context.agent_id === "user"
+      && event.attributes.native_outcome === "confirmed-by-user"
+      && quest.status === "COMPLETED" && quest.outcome_confidence === "UNVERIFIED") {
+      const hasDurableArtifact = quest.artifact_refs.some(a => a.durable === true && a.has_reference === true);
+      quest.outcome_confidence = hasDurableArtifact && PUBLISH_VERIFIED_DOMAINS.has(quest.primary_domain)
+        ? "VERIFIED"
+        : "SUPPORTED";
+      if (quest.settlement_snapshot) quest.settlement_snapshot.outcome_confidence = quest.outcome_confidence;
     }
 
     quest.updated_at = event.timestamp;

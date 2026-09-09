@@ -159,7 +159,7 @@ function mergeArtifactReference(previous, current) {
 // 创作/研究/规划的成果以真实发表动作（发布/提交/交付）为最高证据，
 // 不要求测试存在——但仍然要求持久化产物与真实引用，缺一不可。
 const PUBLISH_RELATIONS = new Set(["published", "committed", "submitted", "delivered"]);
-const PUBLISH_VERIFIED_DOMAINS = new Set(["Research", "Planning", "Creation"]);
+export const PUBLISH_VERIFIED_DOMAINS = new Set(["Research", "Planning", "Creation"]);
 
 function classifyTerminalConfidence(terminalEvent, validation, artifactRefs, evidenceRefCount, latestValidations, lastChange, primaryDomain) {
   if (terminalEvent === null) {

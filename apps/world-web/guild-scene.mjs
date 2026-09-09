@@ -199,7 +199,11 @@ export function desktopGuildModel(snapshot, selectedQuestId = null) {
     domains: GUILD_DOMAINS.map(name => ({ name, value: snapshot.world.progression_totals?.domain_progress?.[name] ?? 0 })),
     artifacts: allArtifacts(snapshot.progressions, snapshot.quests),
     totals: { xp: snapshot.world.progression_totals?.skill_xp ?? 0, active: active.size, quests: ordered.length },
-    validation: selected?.validation_summary ?? null
+    validation: selected?.validation_summary ?? null,
+    confirmableQuestId: selected != null && selected.status === "COMPLETED"
+      && selected.outcome_confidence === "UNVERIFIED"
+      && (selected.artifact_refs ?? []).some(a => a.durable === true && a.has_reference === true)
+      ? selected.quest_id : null
   };
 }
 
@@ -300,4 +304,11 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
   if (focused?.isConnected && focused !== root.activeElement && retained.has(focused)) focused.focus({ preventScroll: true });
   const validation = model.validation;
   root.getElementById("board-validation").textContent = !validation?.attempted ? "验证 · 尚未观测到验证信号" : validation.latest_passed == null ? "验证 · 已记录证据，暂无实测总数" : `验证 · ${validation.latest_passed}/${validation.latest_total ?? "?"} 通过`;
+  // §3.2 懒确认：已完成的 UNVERIFIED 任务且有持久产物时，给玩家一次性确认入口。
+  const confirmButton = root.getElementById("confirm-outcome");
+  if (confirmButton) {
+    confirmButton.hidden = model.confirmableQuestId === null;
+    if (model.confirmableQuestId !== null) confirmButton.dataset.confirmQuest = model.confirmableQuestId;
+    else delete confirmButton.dataset.confirmQuest;
+  }
 }

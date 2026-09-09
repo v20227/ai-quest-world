@@ -88,7 +88,29 @@ function bindEvents() {
   document.querySelector("#quest-picker")?.addEventListener("change", event => {
     selectBoardQuest(event.target.value);
   });
-  document.addEventListener("click", (event) => {
+  document.addEventListener("click", async (event) => {
+    if (event.target.closest("#confirm-outcome")) {
+      const button = event.target.closest("#confirm-outcome");
+      const questId = button.dataset.confirmQuest;
+      if (!questId || button.disabled) return;
+      button.disabled = true;
+      try {
+        const response = await fetch("/api/quest/confirm", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ quest_id: questId })
+        });
+        const payload = await response.json();
+        if (response.ok) showToast(`成果已确认 · 置信度升级为「${payload.outcome_confidence === "VERIFIED" ? "已验证" : "已支持"}」`);
+        else showToast(payload.error ?? "确认失败，稍后再试。");
+        loadSnapshot(ui.mode);
+      } catch {
+        showToast("确认失败，稍后再试。");
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
     if (event.target.closest("#return-open-collection")) {
       ui.pauseReturns = true;
       hideReturnOverlay();
