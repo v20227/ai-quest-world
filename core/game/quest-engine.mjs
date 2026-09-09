@@ -114,7 +114,15 @@ export class QuestEngine {
     }
 
     quest.updated_at = event.timestamp;
-    quest.expedition = buildExpedition(quest, state.events, [...this.#semanticHistory.values()], state.terminalEventIds);
+    // 远征足迹：同一阶段内的连续事件不重算（否则每个事件全量重扫 = O(n²)），
+    // 仅在阶段/类型推进或结算时重建；结束时全量重建一次保证精确水位。
+    const lastRecord = semantic;
+    const lastStep = quest.expedition?.steps?.at(-1);
+    const continuesStep = lastRecord !== null && lastStep !== undefined
+      && lastRecord.phase === lastStep.phase && lastRecord.kind === lastStep.kind;
+    if (rootTerminal || !quest.expedition || !continuesStep) {
+      quest.expedition = buildExpedition(quest, state.events, [...this.#semanticHistory.values()], state.terminalEventIds);
+    }
     if (!wasTerminal && rootTerminal) {
       const { settlement_snapshot, ...settlement } = quest;
       quest.settlement_snapshot = cloneJson(settlement);

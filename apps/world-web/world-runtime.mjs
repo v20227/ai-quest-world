@@ -32,6 +32,7 @@ export class PersistentWorldRuntime {
   #activeSessions = new Set();
   #identityCache = null;
   #identityEventCount = -1;
+  #identityComputedAt = 0;
   #collectionStore;
   #economyStore;
   #projector = new WorldProjector();
@@ -148,10 +149,12 @@ export class PersistentWorldRuntime {
   getObservability() {
     this.#assertOpen();
     const count = this.#eventStore.count();
-    if (count !== this.#identityEventCount) {
+    const now = Date.now();
+    if (count !== this.#identityEventCount && now - this.#identityComputedAt > 30_000) {
       const events = this.#eventStore.list();
       this.#identityCache = describeRuntimeIdentities(events);
       this.#identityEventCount = events.length;
+      this.#identityComputedAt = now;
     }
     return {
       version: "0.1",
