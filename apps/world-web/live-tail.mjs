@@ -163,8 +163,13 @@ export function startLiveTail({
   function filterByWatermark(lines, entry, field) {
     if (entry.highWater === undefined) entry.highWater = 0;
     const filtered = [];
-    for (const line of lines) {
+    for (const [index, line] of lines.entries()) {
       if (!line.trim()) continue;
+      if (index === 0) {
+        // 首行是会话头（session_meta / session），解析必需；重发由下游 event_id 去重。
+        filtered.push(line);
+        continue;
+      }
       try {
         const record = JSON.parse(line);
         const seq = Number.isSafeInteger(record[field]) ? record[field] : null;
