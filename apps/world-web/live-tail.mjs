@@ -24,7 +24,7 @@ import { parseRolloutSession } from "../../adapters/codex-desktop/replay-session
 
 const DEFAULT_SETTLE_MINUTES = 15;
 const DEFAULT_POLL_MS = 3000;
-const ACTIVE_PARSE_THROTTLE_MS = 8000;
+const ACTIVE_PARSE_THROTTLE_MS = 30000;
 const MAX_BUFFER = 64 * 1024 * 1024;
 
 export function startLiveTail({

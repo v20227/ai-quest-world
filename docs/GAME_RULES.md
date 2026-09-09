@@ -377,10 +377,10 @@ The accepted scope now also includes local Gold, a fixed-price shop, pet hatchin
 
 ### Economy-1
 
-- A frozen RESOLVED, COMPLETED Quest progression grants20 Gold when VERIFIED,12 when SUPPORTED, otherwise0. Deduplicate by root goal identity, independently of policy version; replay or adding child runs never issues another grant for that root. The existing frozen first settlement determines the reward, without a second bonus for later evidence updates.
+- A frozen RESOLVED, COMPLETED Quest progression grants 20 Gold when VERIFIED, 12 when SUPPORTED, otherwise 0. Deduplicate by root goal identity, independently of policy version; replay or adding child runs never issues another grant for that root. The existing frozen first settlement determines the reward, without a second bonus for later evidence updates.
 - Start balance0; existing eligible historical settlements backfill once, preserving source Quest and event time with a historical marker in the ledger. No login stipend or duration/call-count income.
 - Signal companion egg costs40; only one egg or hatched companion of this initial species may be owned. Hatching consumes one egg immediately and deterministically creates the companion, without automatically selecting it.
-- Focus apple costs4 and adds5 growth. Preferred research biscuit costs8 and adds12. Food quantities are integer1..20. Growth is capped100, with stages at0,25,60,100; no decay. Reject feeding at full growth and quantities beyond the servings needed to reach100 before consuming food. The final required serving may be partially effective, and the UI previews the actual increase.
+- Focus apple costs 4 and adds 5 growth. Preferred research biscuit costs 8 and adds 12. Food quantities are integer1..20. Growth is capped100, with stages at0,25,60,100; no decay. Reject feeding at full growth and quantities beyond the servings needed to reach100 before consuming food. The final required serving may be partially effective, and the UI previews the actual increase.
 - The initial companion is decorative and its growth is from food. Display alongside work does not claim it participated in an observed Harness run. No combat effects, free training loop, paid currency, random draw or mounts.
 - Wallet records retain source Quest, confidence, amount, resulting balance and times. Player receipts retain command identity, action, consumed quantities, currency/growth changes and policy version.
 
