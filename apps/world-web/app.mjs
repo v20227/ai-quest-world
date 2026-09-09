@@ -650,10 +650,28 @@ function showReturnOverlay(entry) {
   const progression = ui.source === "live" && entry.quest_id ? ui.snapshot?.progressions?.find(item => item.quest_id === entry.quest_id) : null;
   ui.returnCollection = grant;
   const highlights = (entry.highlights ?? []).slice(0, 3);
-  refs.returnTitle.textContent = entry.collectionOnly ? "新收藏已解锁。" : highlights.some((item) => item.kind === "milestone_unlocked")
-    ? "世界因你而改变。"
+  refs.returnTitle.textContent = entry.batch ? "离线结算完成。"
+    : entry.collectionOnly ? "新收藏已解锁。"
+    : highlights.some((item) => item.kind === "milestone_unlocked") ? "世界因你而改变。"
     : "世界记住了你的努力。";
-  refs.returnSubtitle.textContent = entry.collectionOnly ? "营地纪念已收入收藏。" : `${entry.title ?? "一次有意义的远征"}已回到营地。`;
+  refs.returnSubtitle.textContent = entry.batch
+    ? `你不在的时候，完成了 ${entry.count} 件真实的事。`
+    : entry.collectionOnly ? "营地纪念已收入收藏。"
+    : `${entry.title ?? "一次有意义的远征"}已回到营地。`;
+  if (entry.batch) {
+    const lines = [`${entry.count} 个远征收获记录`];
+    if (entry.totalXp > 0) lines.push(`记录成长 +${entry.totalXp} 经验`);
+    if (entry.totalGold > 0) lines.push(`工作金币 +${entry.totalGold} · 已入账`);
+    if (entry.newCollection > 0) lines.push(`新增收藏 ×${entry.newCollection}`);
+    refs.returnHighlights.innerHTML = lines.map(line => `<div class="return-highlight"><span>${escapeHtml(line)}</span></div>`).join("");
+    const blessing = document.getElementById("return-blessing");
+    if (blessing) blessing.textContent = blessingFor(`batch-${entry.count}`);
+    let collectionButton = document.querySelector("#return-open-collection");
+    if (collectionButton) collectionButton.hidden = true;
+    refs.returnOverlay.classList.remove("is-hidden");
+    ui.returnTimer = window.setTimeout(hideReturnOverlay, 8000);
+    return;
+  }
   refs.returnHighlights.innerHTML = highlights.map((item) => `<div class="return-highlight"><span>${escapeHtml(returnHighlightLabel(item))}</span></div>`).join("");
   if (progression?.skill_xp > 0) refs.returnHighlights.insertAdjacentHTML("beforeend", `<div class="return-highlight"><span>记录成长 +${Number(progression.skill_xp)} 经验</span></div>`);
   if (income) refs.returnHighlights.insertAdjacentHTML("beforeend", `<div class="return-highlight"><span>本任务金币 +${Number(income.gold_delta)} · 已入账，可在工作钱包追溯</span></div>`);
@@ -686,6 +704,23 @@ function hideReturnOverlay() {
 function showNextReturn() {
   if (ui.source !== "live" || document.hidden || ui.activeReturn !== null || ui.pauseReturns) return;
   const grants = collectionNotices.pending(ui.snapshot);
+  // Habitica 节奏：离线堆积的回归汇总为一张离线结算，不逐条轰炸。
+  if (ui.pendingReturns.length > 1) {
+    const batch = ui.pendingReturns.splice(0);
+    for (const item of batch) if (item.return_id) ui.seenReturns.add(item.return_id);
+    try { localStorage.setItem("ai-quest-world-seen-returns", JSON.stringify([...ui.seenReturns])); } catch { /* Keep the current session cursor. */ }
+    const questIds = new Set(batch.map(item => item.quest_id).filter(Boolean));
+    const progressions = questIds.size ? (ui.snapshot?.progressions ?? []).filter(item => questIds.has(item.quest_id)) : [];
+    const totalXp = progressions.reduce((sum, item) => sum + Number(item.skill_xp ?? 0), 0);
+    const totalGold = questIds.size
+      ? (ui.snapshot?.economy?.history.entries ?? []).filter(item => item.type === "work_reward" && questIds.has(item.quest_id)).reduce((sum, item) => sum + Number(item.gold_delta ?? 0), 0)
+      : 0;
+    const batchGrants = grants.filter(grant => questIds.has(grant.quest_id));
+    for (const grant of batchGrants) collectionNotices.acknowledge(ui.snapshot, grant);
+    ui.activeReturn = { batch: true, count: batch.length, totalXp, totalGold, newCollection: batchGrants.length, return_id: `batch-${Date.now()}` };
+    showReturnOverlay(ui.activeReturn);
+    return;
+  }
   let next = ui.pendingReturns.shift();
   if (next) next = { ...next, collectionGrant: grants.find(grant => grant.quest_id === next.quest_id) };
   else if (grants.length) next = { collectionOnly: true, collectionGrant: grants[0] };
