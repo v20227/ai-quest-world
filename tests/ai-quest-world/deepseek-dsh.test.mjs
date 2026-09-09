@@ -18,11 +18,11 @@ function dshLines({ cwd, resultPath }) {
     JSON.stringify({ type: "session/title", seq: next(), time: T0 + 1000, data: { title: "修复登录校验" } }),
     JSON.stringify({ type: "turn/start", seq: next(), time: T0 + 2000, data: { turn: 1 } }),
     JSON.stringify({ type: "tool/call", seq: 10, time: T0 + 3000, data: { turn: 1, step: 1, callId: "call-w1", name: "write", arguments: JSON.stringify({ path: resultPath }) } }),
-    JSON.stringify({ type: "tool/result", seq: 11, time: T0 + 3100, data: { turn: 1, step: 1, message: { role: "tool", content: ["done"] } }, sourceEventSeqs: [10], surfaceOp: "append" }),
+    JSON.stringify({ type: "tool/result", seq: 11, time: T0 + 3100, data: { turn: 1, step: 1, message: { role: "tool", content: [{ type: "tool-result", toolCallId: "call-w1", content: [{ type: "text", text: "done" }], isError: false }] } }, sourceEventSeqs: [10], surfaceOp: "append" }),
     JSON.stringify({ type: "tool/call", seq: 20, time: T0 + 4000, data: { turn: 1, step: 2, callId: "call-b1", name: "bash", arguments: JSON.stringify({ command: "node --test", description: "run tests" }) } }),
     JSON.stringify({ type: "reasoning-chunks", seq: 21, time: T0 + 4100, data: { text: PRIVATE_REASONING } }),
     JSON.stringify({ type: "assistant/chunk", seq: 22, time: T0 + 4200, data: { text: PRIVATE_ASSISTANT } }),
-    JSON.stringify({ type: "tool/result", seq: 23, time: T0 + 5000, data: { turn: 1, step: 2, message: { role: "tool", content: ["# tests 2\n# pass 2\n# fail 0"] } }, sourceEventSeqs: [20], surfaceOp: "append" }),
+    JSON.stringify({ type: "tool/result", seq: 23, time: T0 + 5000, data: { turn: 1, step: 2, message: { role: "tool", content: [{ type: "tool-result", toolCallId: "call-b1", content: [{ type: "text", text: "# tests 2\n# pass 2\n# fail 0" }], isError: false }] } }, sourceEventSeqs: [20], surfaceOp: "append" }),
     JSON.stringify({ type: "tool/call", seq: 30, time: T0 + 6000, data: { turn: 1, step: 3, callId: "call-r1", name: "read", arguments: JSON.stringify({ path: join(cwd, "src") }) } }),
     JSON.stringify({ type: "tool/call", seq: 31, time: T0 + 6100, data: { turn: 1, step: 4, callId: "call-r2", name: "grep", arguments: JSON.stringify({ pattern: "auth" }) } }),
     JSON.stringify({ type: "turn/end", seq: 40, time: T0 + 7000, data: { turn: 1, reason: "done" } })

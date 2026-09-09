@@ -47,7 +47,7 @@ const SKIPPED_TYPES = new Set([
 ]);
 
 const READ_TOOLS = new Set(["read", "grep", "glob", "read_image", "list_agents"]);
-const WRITE_TOOLS = new Map([["write", "created"], ["edit", "modified"]]);
+const WRITE_TOOLS = new Map([["write", "created"], ["edit", "modified"], ["str_replace_editor", "modified"]]);
 const API_TOOLS = new Set(["subagent", "skill", "send_message", "todo_write", "create_goal", "ask_user_question"]);
 
 /**
@@ -203,7 +203,10 @@ async function consumeToolCall(state, data, seq, time) {
   }
   if (WRITE_TOOLS.has(name)) {
     const path = nonEmptyString(args?.path) ?? nonEmptyString(args?.file_path) ?? nonEmptyString(args?.filePath);
-    state.pendingCalls.set(callId, { kind: "write", changeType: WRITE_TOOLS.get(name), path, seq });
+    const changeType = name === "str_replace_editor" && args?.command === "create"
+      ? "created"
+      : WRITE_TOOLS.get(name);
+    state.pendingCalls.set(callId, { kind: "write", changeType, path, seq });
     return;
   }
   if (API_TOOLS.has(name)) {
@@ -223,14 +226,16 @@ async function consumeToolResult(state, data, sourceSeq, seq, time) {
   state.pendingCalls.delete(callId);
 
   if (pending.kind === "bash") {
+    const error = resultIsError(data);
     emitEvent(state, `tool-completed-${callId}`, "tool.completed", {
       tool_kind: "shell",
       tool_name: "bash",
-      category_hint: pending.validation === null ? "other" : "validation"
-    }, "completed", time, undefined);
+      category_hint: pending.validation === null ? "other" : "validation",
+      ...(error === undefined ? {} : { success: !error })
+    }, error === undefined ? "completed" : error ? "failed" : "succeeded", time, undefined);
     if (pending.validation !== null) {
       const measurements = validationMeasurements(resultText(data));
-      const checked = (measurements.failed ?? 0) > 0
+      const checked = error === true || (measurements.failed ?? 0) > 0
         ? false
         : pending.validation.kind !== "test" || (measurements.passed ?? 0) > 0 ? true : undefined;
       emitEvent(state, `validation-completed-${callId}`, "validation.completed",
@@ -362,11 +367,37 @@ function parseArguments(raw) {
 }
 
 function resultText(data) {
-  const content = data?.message?.content;
-  if (Array.isArray(content)) {
-    return content.filter(part => typeof part === "string").join("\n");
+  const texts = [];
+  collectText(data?.message?.content, texts, 0);
+  return texts.join("\n");
+}
+
+function collectText(value, texts, depth) {
+  if (depth > 4 || texts.length > 64) return;
+  if (typeof value === "string") {
+    texts.push(value);
+    return;
   }
-  return typeof content === "string" ? content : "";
+  if (Array.isArray(value)) {
+    for (const part of value) collectText(part, texts, depth + 1);
+    return;
+  }
+  if (isRecord(value)) {
+    if (typeof value.text === "string") {
+      texts.push(value.text);
+      return;
+    }
+    if (Array.isArray(value.content)) {
+      collectText(value.content, texts, depth + 1);
+    }
+  }
+}
+
+function resultIsError(data) {
+  const content = data?.message?.content;
+  if (!Array.isArray(content)) return undefined;
+  const toolResult = content.find(part => isRecord(part) && part.type === "tool-result");
+  return typeof toolResult?.isError === "boolean" ? toolResult.isError : undefined;
 }
 
 function validationStatusForSuccess(success) {
