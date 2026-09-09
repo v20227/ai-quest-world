@@ -132,7 +132,8 @@ export function startLiveTail({
       if (entry.kind === "dsh") {
         const output = spawnSync("zstd", ["-dc", filePath], { maxBuffer: MAX_BUFFER });
         if (output.status !== 0) return [];
-        const { events } = await parseDshSession(output.stdout.toString("utf8").split("\n"), {
+        const lines = filterByWatermark(output.stdout.toString("utf8").split("\n"), entry, "seq");
+        const { events } = await parseDshSession(lines, {
           artifactPaths,
           assumeCompleted: settle,
           terminalNativeOutcome
@@ -140,7 +141,8 @@ export function startLiveTail({
         return events;
       }
       const content = await readFile(filePath, "utf8");
-      const { events } = await parseRolloutSession(content.split("\n"), {
+      const lines = filterByWatermark(content.split("\n"), entry, "ordinal");
+      const { events } = await parseRolloutSession(lines, {
         artifactPaths,
         title: codexTitleFor(filePath),
         assumeCompleted: settle,
@@ -151,6 +153,34 @@ export function startLiveTail({
       log(`live-tail skipped ${filePath}: ${error.message}`);
       return [];
     }
+  }
+
+  /**
+   * 记录高水位：活跃会话会整体重写，但只有尾部是新增记录。
+   * 过滤掉水位之前的记录，避免每轮轮询都重新发射/校验/去重整段历史。
+   * （会话头记录无序号，永远保留；下游 event_id 去重兜底。）
+   */
+  function filterByWatermark(lines, entry, field) {
+    if (entry.highWater === undefined) entry.highWater = 0;
+    const filtered = [];
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const record = JSON.parse(line);
+        const seq = Number.isSafeInteger(record[field]) ? record[field] : null;
+        if (seq === null) {
+          filtered.push(line);
+          continue;
+        }
+        if (seq >= entry.highWater) {
+          filtered.push(line);
+          if (seq > entry.highWater) entry.highWater = seq;
+        }
+      } catch {
+        filtered.push(line);
+      }
+    }
+    return filtered;
   }
 
   async function listFiles(root, depth) {
