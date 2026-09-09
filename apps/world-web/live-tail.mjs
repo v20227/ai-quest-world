@@ -34,6 +34,8 @@ export function startLiveTail({
   pollMs = DEFAULT_POLL_MS,
   artifactPaths = false,
   terminalNativeOutcome = "inferred-inactivity",
+  backfillDays = 3,
+  maxFileBytes = 50 * 1024 * 1024,
   log = () => {}
 } = {}) {
   if (runtime === null || runtime === undefined || typeof runtime.ingest !== "function") {
@@ -41,6 +43,8 @@ export function startLiveTail({
   }
   const files = new Map();
   const titles = { map: new Map(), mtimeMs: 0 };
+  const startedAtMs = Date.now();
+  const backfillMs = backfillDays * 24 * 60 * 60 * 1000;
   let stopped = false;
   let polling = false;
 
@@ -90,6 +94,15 @@ export function startLiveTail({
       const entry = files.get(filePath) ?? { kind, size: -1, mtimeMs: 0, lastWriteMs: 0, settled: false };
       if (entry.settled && info.mtimeMs <= entry.mtimeMs) continue;
       if (info.size === entry.size && info.mtimeMs === entry.mtimeMs) continue;
+      if (!files.has(filePath)) {
+        // Bound the first-run backfill: ancient or oversized history is
+        // registered but never parsed or settled. Live mode is for now.
+        if (startedAtMs - info.mtimeMs > backfillMs || info.size > maxFileBytes) {
+          files.set(filePath, { kind, size: info.size, mtimeMs: info.mtimeMs, lastWriteMs: Date.now(), settled: true });
+          if (info.size > maxFileBytes) log(`live-tail skipping oversized history file (${Math.round(info.size / 1024 / 1024)}MB): ${filePath}`);
+          continue;
+        }
+      }
       files.set(filePath, entry);
       pending.push(...await parseEvents(filePath, entry, false));
       entry.size = info.size;

@@ -134,6 +134,8 @@ export function startWorldWebServer({
       runtime,
       artifactPaths: process.env.AI_QUEST_WORLD_ARTIFACT_PATHS === "1",
       settleMinutes: Number(process.env.AI_QUEST_WORLD_LIVE_SETTLE_MINUTES ?? 15),
+      backfillDays: Number(process.env.AI_QUEST_WORLD_LIVE_BACKFILL_DAYS ?? 3),
+      maxFileBytes: Number(process.env.AI_QUEST_WORLD_LIVE_MAX_FILE_MB ?? 50) * 1024 * 1024,
       log: message => console.log(`[live-tail] ${message}`)
     });
     server.on("close", () => tail.stop());
