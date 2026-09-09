@@ -23,7 +23,8 @@ import { parseRolloutSession } from "../../adapters/codex-desktop/replay-session
  */
 
 const DEFAULT_SETTLE_MINUTES = 15;
-const DEFAULT_POLL_MS = 2000;
+const DEFAULT_POLL_MS = 3000;
+const ACTIVE_PARSE_THROTTLE_MS = 8000;
 const MAX_BUFFER = 64 * 1024 * 1024;
 
 export function startLiveTail({
@@ -91,9 +92,17 @@ export function startLiveTail({
       } catch {
         continue;
       }
-      const entry = files.get(filePath) ?? { kind, size: -1, mtimeMs: 0, lastWriteMs: 0, settled: false };
+      const entry = files.get(filePath) ?? { kind, size: -1, mtimeMs: 0, lastWriteMs: 0, lastParseMs: 0, settled: false };
       if (entry.settled && info.mtimeMs <= entry.mtimeMs) continue;
       if (info.size === entry.size && info.mtimeMs === entry.mtimeMs) continue;
+      // 活跃会话每隔几秒追加写入；解析+重投影代价高，同一文件节流解析，
+      // 让世界以秒级而非毫秒级跟随真实工作。
+      if (files.has(filePath) && Date.now() - entry.lastParseMs < ACTIVE_PARSE_THROTTLE_MS && !entry.settled) {
+        entry.size = info.size;
+        entry.mtimeMs = info.mtimeMs;
+        entry.lastWriteMs = Date.now();
+        continue;
+      }
       if (!files.has(filePath)) {
         // Bound the first-run backfill: ancient or oversized history is
         // registered but never parsed or settled. Live mode is for now.
@@ -108,6 +117,7 @@ export function startLiveTail({
       entry.size = info.size;
       entry.mtimeMs = info.mtimeMs;
       entry.lastWriteMs = Date.now();
+      entry.lastParseMs = Date.now();
     }
   }
 
