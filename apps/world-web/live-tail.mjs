@@ -49,21 +49,29 @@ export function startLiveTail({
     polling = true;
     try {
       await refreshCodexTitles();
-      await scanJoin(dshHome, "sessions", 3, name => name === "session.jsonl.zstd", "dsh");
-      await scanJoin(codexHome, "sessions", 3, name => name.startsWith("rollout-") && name.endsWith(".jsonl"), "codex");
+      const pending = [];
+      await scanJoin(dshHome, "sessions", 3, name => name === "session.jsonl.zstd", "dsh", pending);
+      await scanJoin(codexHome, "sessions", 3, name => name.startsWith("rollout-") && name.endsWith(".jsonl"), "codex", pending);
+      if (pending.length > 0) runtime.ingest(pending);
       const now = Date.now();
+      const settleEvents = [];
+      const settledPaths = [];
       for (const [filePath, entry] of files) {
         if (entry.settled || now - entry.lastWriteMs <= settleMinutes * 60_000) continue;
-        await processFile(filePath, entry, true);
+        settleEvents.push(...await parseEvents(filePath, entry, true));
         entry.settled = true;
-        log(`settled ${entry.kind} session after inactivity: ${filePath}`);
+        settledPaths.push(filePath);
+      }
+      if (settleEvents.length > 0) runtime.ingest(settleEvents);
+      for (const filePath of settledPaths) {
+        log(`settled ${files.get(filePath)?.kind} session after inactivity: ${filePath}`);
       }
     } finally {
       polling = false;
     }
   }
 
-  async function scanJoin(home, sub, depth, match, kind) {
+  async function scanJoin(home, sub, depth, match, kind, pending) {
     const root = join(home, sub);
     let found;
     try {
@@ -83,25 +91,24 @@ export function startLiveTail({
       if (entry.settled && info.mtimeMs <= entry.mtimeMs) continue;
       if (info.size === entry.size && info.mtimeMs === entry.mtimeMs) continue;
       files.set(filePath, entry);
-      await processFile(filePath, entry, false);
+      pending.push(...await parseEvents(filePath, entry, false));
       entry.size = info.size;
       entry.mtimeMs = info.mtimeMs;
       entry.lastWriteMs = Date.now();
     }
   }
 
-  async function processFile(filePath, entry, settle) {
+  async function parseEvents(filePath, entry, settle) {
     try {
       if (entry.kind === "dsh") {
         const output = spawnSync("zstd", ["-dc", filePath], { maxBuffer: MAX_BUFFER });
-        if (output.status !== 0) return;
+        if (output.status !== 0) return [];
         const { events } = await parseDshSession(output.stdout.toString("utf8").split("\n"), {
           artifactPaths,
           assumeCompleted: settle,
           terminalNativeOutcome
         });
-        runtime.ingest(events);
-        return;
+        return events;
       }
       const content = await readFile(filePath, "utf8");
       const { events } = await parseRolloutSession(content.split("\n"), {
@@ -110,9 +117,10 @@ export function startLiveTail({
         assumeCompleted: settle,
         terminalNativeOutcome
       });
-      runtime.ingest(events);
+      return events;
     } catch (error) {
       log(`live-tail skipped ${filePath}: ${error.message}`);
+      return [];
     }
   }
 
