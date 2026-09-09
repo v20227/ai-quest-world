@@ -102,7 +102,7 @@ contents; `content_included: false`.
 | --- | --- | --- |
 | `adapters/first-harness` (simulated) | reference implementation, test suite anchor | synthetic stream |
 | `adapters/codex-cli` | implemented (passive collector + observe entry) | CLI JSONL stream |
-| `adapters/codex-desktop` | designed, feasibility verified (`docs/OBSERVER_FEASIBILITY.md`) | local session files + state DB |
+| `adapters/codex-desktop` | replay implemented (rollout JSONL → UARP → settlement verified); live tail designed (`docs/OBSERVER_FEASIBILITY.md`) | local session files + state DB |
 
 New harnesses follow this pattern: copy the codex-cli adapter shape, swap the
 source reader, map the event vocabulary per §4, keep the core untouched.
