@@ -1,6 +1,16 @@
 node_modules/
 coverage/
 .DS_Store
+.sakura/
+.codex/
+*.log
+*.jsonl
+*.db-shm
+*.db-wal
+*.sqlite-shm
+*.sqlite-wal
+tmp/
+temp/
 .env
 .env.*
 !.env.example

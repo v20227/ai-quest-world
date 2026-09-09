@@ -58,8 +58,8 @@ If documents conflict, use this priority order:
 
 Do not implement unless explicitly moved into scope:
 
-- Gold/economy/shop
-- pets/mounts
+- Real-money purchases, currency exchange, player trading, or paid random rewards
+- mounts
 - equipment-stat systems
 - NPC AI
 - PvP/social/guilds/leaderboards
@@ -73,6 +73,8 @@ Do not implement unless explicitly moved into scope:
 - complex real-time combat
 
 When uncertain, choose the smaller implementation that proves the core loop.
+
+Gold, a local fixed-price shop, pet hatching and feeding are now explicitly in scope. Keep all grants, purchases, hatching and feeding authoritative in Game Core and locally persisted. Currency must come from qualifying real outcomes, never raw usage volume. Separate cosmetic/pet inventory from evidence-backed artifact loot. Preserve read-only Harness integration, deterministic replay and idempotent transactions. Pricing and reward amounts require a defined economy policy before implementation.
 
 ## Engineering behavior
 

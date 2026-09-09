@@ -267,3 +267,42 @@ body[data-theme] {
   .guild-fit .scene-status { max-width:60%; }
   .guild-fit .bottom-nav { gap:0; justify-content:space-around; }
 }
+ .collection-art {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  image-rendering: pixelated;
+  margin-bottom: 12px;
+}
+.camp-memento {
+  position: absolute;
+  right: 4%;
+  bottom: 10%;
+  width: clamp(52px, 6vw, 100px);
+  padding: 4px;
+  border: 3px ridge #a7814d;
+  background: #241b1b;
+  cursor: pointer;
+  z-index: 8;
+}
+.camp-memento[hidden] { display: none; }
+.camp-memento img { display: block; width: 100%; image-rendering: pixelated; }
+.camp-memento:focus-visible { outline: 3px solid #f7db97; outline-offset: 4px; }
+@media (max-width: 700px) {
+  .camp-memento { bottom: 6%; right: 2%; }
+}
+.economy-panel form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+.economy-panel input[type="number"] { width: 5em; font: inherit; }
+.economy-panel output { flex-basis: 100%; }
+.economy-panel progress { display: block; width: 100%; margin-block: 10px; }
+.companion-portrait, .earned-companion {
+  background: url('/assets/pixel/guild/hall-residents.png') 0 100% / 200% 200% no-repeat;
+  image-rendering: pixelated;
+  aspect-ratio: 1;
+}
+.companion-portrait { display: block; width: 96px; }
+.earned-companion { position: absolute; left: 4%; bottom: 5%; width: clamp(48px, 6vw, 96px); z-index: 8; padding: 0; border: 0; cursor: pointer; }
+.earned-companion[hidden] { display: none; }
+.earned-companion:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }

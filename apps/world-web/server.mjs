@@ -8,6 +8,8 @@ import { projectWorld } from "./project-world.mjs";
 import { withGameplay } from "./gameplay-snapshot.mjs";
 import { PersistentWorldRuntime } from "./world-runtime.mjs";
 import { isLocalRequest, readArtifact } from "./artifact-access.mjs";
+import { handleCollectionPlacement } from "./collection-api.mjs";
+import { handleEconomyRequest } from "./economy-api.mjs";
 
 const APP_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_FILES = new Map([
@@ -16,6 +18,10 @@ const PUBLIC_FILES = new Map([
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
   ["/guild-desktop.css", ["guild-desktop.css", "text/css; charset=utf-8"]],
   ["/app.mjs", ["app.mjs", "text/javascript; charset=utf-8"]],
+  ["/collection-view.mjs", ["collection-view.mjs", "text/javascript; charset=utf-8"]],
+  ["/collection-notices.mjs", ["collection-notices.mjs", "text/javascript; charset=utf-8"]],
+  ["/economy-view.mjs", ["economy-view.mjs", "text/javascript; charset=utf-8"]],
+  ["/capture-view.mjs", ["capture-view.mjs", "text/javascript; charset=utf-8"]],
   ["/expedition-view.mjs", ["expedition-view.mjs", "text/javascript; charset=utf-8"]],
   ["/view-state.mjs", ["view-state.mjs", "text/javascript; charset=utf-8"]],
   ["/guild-scene.mjs", ["guild-scene.mjs", "text/javascript; charset=utf-8"]],
@@ -26,7 +32,12 @@ const PUBLIC_FILES = new Map([
   ["/scene-motion.mjs", ["scene-motion.mjs", "text/javascript; charset=utf-8"]],
   ["/scene-frames.mjs", ["scene-frames.mjs", "text/javascript; charset=utf-8"]],
   ["/scene-objects.mjs", ["scene-objects.mjs", "text/javascript; charset=utf-8"]],
-  ["/workshop-display.mjs", ["workshop-display.mjs", "text/javascript; charset=utf-8"]]
+  ["/workshop-display.mjs", ["workshop-display.mjs", "text/javascript; charset=utf-8"]],
+  ["/command-hall", ["command-hall.html", "text/html; charset=utf-8"]],
+  ["/command-hall.html", ["command-hall.html", "text/html; charset=utf-8"]],
+  ["/command-hall.css", ["command-hall.css", "text/css; charset=utf-8"]],
+  ["/command-hall.mjs", ["command-hall.mjs", "text/javascript; charset=utf-8"]],
+  ["/command-hall-fixtures.mjs", ["command-hall-fixtures.mjs", "text/javascript; charset=utf-8"]]
 ]);
 
 const ASSET_DIRECTORY = resolve(APP_DIRECTORY, "../../assets");
@@ -107,6 +118,15 @@ export function startWorldWebServer({
 }
 
 async function handleRequest(request, response, runtime, artifactRoot) {
+  const economyUrl = new URL(request.url ?? "/", "http://localhost");
+  if (["/api/economy/command", "/api/economy/history"].includes(economyUrl.pathname)) {
+    await handleEconomyRequest(request, response, runtime, economyUrl);
+    return;
+  }
+  if (request.method === "POST" && new URL(request.url ?? "/", "http://localhost").pathname === "/api/collection/placement") {
+    await handleCollectionPlacement(request, response, runtime);
+    return;
+  }
   if (request.method !== "GET") {
     response.writeHead(405, { allow: "GET" });
     response.end();

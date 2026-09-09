@@ -2,6 +2,12 @@ import { currentQuest, recentQuests, allArtifacts, artifactKey, unseenReturns } 
 import { renderGuildScene, displayLabel, returnHighlightLabel } from "./guild-scene.mjs";
 import { createPixelComposition } from "./pixel-composition.mjs";
 import { renderExpedition, renderSettlement, renderGoals } from "./expedition-view.mjs";
+import { renderCollection, renderCollectionPlacement } from "./collection-view.mjs";
+import { createCollectionNotices } from "./collection-notices.mjs";
+import { createEconomyUI } from "./economy-view.mjs";
+import { captureLabel, renderCaptureStatus } from "./capture-view.mjs";
+
+const collectionNotices = createCollectionNotices();
 
 const refs = {
   body: document.body,
@@ -36,10 +42,13 @@ const ui = {
   mode: "canonical",
   toastTimer: null,
   loading: false,
+  savingCollection: false,
   generation: 0,
   pendingReturns: [],
   seenReturns: restoreSeenReturns(),
   activeReturn: null,
+  returnCollection: null,
+  pauseReturns: false,
   returnTimer: null,
   panelMarkup: null,
   returnFocus: null,
@@ -47,10 +56,17 @@ const ui = {
   panelFocus: null
 };
 
-const BUILDING_PANELS = new Set(["gate", "guild", "workshop", "library", "camp", "chronicle", "settings", "quest", "artifact", "artifacts", "domain"]);
+const ECONOMY_PANELS = new Set(["wallet", "shop", "inventory", "companions"]);
+const BUILDING_PANELS = new Set(["gate", "guild", "workshop", "library", "camp", "chronicle", "settings", "quest", "artifact", "artifacts", "domain", "collection", ...ECONOMY_PANELS]);
 
 const pixelComposition = createPixelComposition(document, {
   openArtifact: key => { ui.selectedArtifactId = key; selectPanel("artifact"); }
+});
+
+const economyUI = createEconomyUI(document, {
+  refresh: () => loadSnapshot(ui.mode, { showReturn: false, silent: true }),
+  notify: showToast,
+  rerender: () => { if (ECONOMY_PANELS.has(ui.selectedPanel)) selectPanel(ui.selectedPanel, { keepMobileOpen: false }); }
 });
 
 init();
@@ -74,6 +90,14 @@ function bindEvents() {
     selectBoardQuest(event.target.value);
   });
   document.addEventListener("click", (event) => {
+    if (event.target.closest("#return-open-collection")) {
+      ui.pauseReturns = true;
+      hideReturnOverlay();
+      selectPanel("collection");
+      return;
+    }
+    const placementTrigger = event.target.closest("[data-place-collectible]");
+    if (placementTrigger) { saveCollectible(placementTrigger.dataset.placeCollectible || null); return; }
     const runTrigger = event.target.closest("[data-select-quest]");
     if (runTrigger && ui.snapshot) {
       selectBoardQuest(runTrigger.dataset.selectQuest);
@@ -146,7 +170,10 @@ function bindEvents() {
   document.addEventListener("keydown", (event) => {
     if (document.querySelector(".display-drawer[open]")) return;
     if (event.key === "Tab" && !refs.returnOverlay.classList.contains("is-hidden")) {
-      event.preventDefault(); refs.enterWorld.focus(); return;
+      const buttons = [...refs.returnOverlay.querySelectorAll("button:not([hidden]):not(:disabled)")];
+      const current = buttons.indexOf(document.activeElement);
+      const next = current < 0 ? (event.shiftKey ? buttons.length - 1 : 0) : (current + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
+      event.preventDefault(); buttons[next]?.focus(); return;
     }
     if (event.key === "Escape") {
       if (!refs.returnOverlay.classList.contains("is-hidden")) {
@@ -158,7 +185,38 @@ function bindEvents() {
   });
 }
 
+async function saveCollectible(itemId) {
+  if (ui.savingCollection || ui.source !== "live" || !ui.snapshot?.collection) return;
+  const namespace = ui.snapshot.display_namespace;
+  const revision = ui.snapshot.collection.placement.revision;
+  ui.savingCollection = true;
+  selectPanel("collection");
+  try {
+    const response = await fetch("/api/collection/placement", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-world-namespace": namespace },
+      body: JSON.stringify({ item_id: itemId, revision }),
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) throw new Error(response.status === 409 ? "收藏状态已变化，已请求刷新，请确认后重试。" : "保存未完成，请刷新后确认陈列状态。");
+    const collection = await response.json();
+    if (ui.source === "live" && ui.snapshot?.display_namespace === namespace) {
+      ui.snapshot.collection = collection;
+      renderCollectionPlacement(document, ui.snapshot);
+      showToast(itemId ? "纪念画已摆放并保存。" : "已收起，纪念画仍在收藏中。");
+    }
+  } catch (error) {
+    showToast(error.name === "TimeoutError" ? "保存结果暂未确认，请刷新后查看，勿重复操作。" : error.message);
+  } finally {
+    ui.savingCollection = false;
+    if (ui.source === "live" && ui.snapshot?.display_namespace === namespace) {
+      await loadSnapshot(ui.mode, { showReturn: false, silent: true });
+    }
+  }
+}
+
 async function loadSnapshot(mode = ui.mode, { showReturn = true, silent = false } = {}) {
+  if (economyUI.busy) return;
   const generation = ++ui.generation;
   ui.loading = true;
   ui.mode = mode;
@@ -182,7 +240,7 @@ async function loadSnapshot(mode = ui.mode, { showReturn = true, silent = false 
     if (generation !== ui.generation) return;
     snapshot.quests = recentQuests(snapshot.quests);
     ui.snapshot = snapshot;
-    setConnection(ui.source === "live" ? "世界已就绪" : "演示", false);
+    setConnection(ui.source === "live" ? captureLabel(snapshot) : "演示 · 非真实采集", false);
     renderWorld(snapshot);
     selectPanel(ui.selectedPanel, { keepMobileOpen: false });
     if (showReturn && ui.source === "live") {
@@ -204,6 +262,8 @@ async function loadSnapshot(mode = ui.mode, { showReturn = true, silent = false 
 }
 
 function renderWorld(snapshot) {
+  economyUI.update(snapshot, ui.source);
+  renderCollectionPlacement(document, snapshot);
   pixelComposition.update(snapshot, ui.source);
   renderGuildScene(snapshot, document, ui.selectedQuestId);
   const { world, quests } = snapshot;
@@ -277,6 +337,8 @@ function closePanel() {
   syncPanelAccess();
   if (ui.panelFocus?.isConnected) ui.panelFocus.focus({ preventScroll: true });
   else refs.reloadButton.focus({ preventScroll: true });
+  ui.pauseReturns = false;
+  showNextReturn();
 }
 
 function selectBoardQuest(id) {
@@ -292,7 +354,14 @@ function syncPanelAccess() {
 }
 
 function panelDefinition(panel) {
+  if (ECONOMY_PANELS.has(panel)) return {
+    eyebrow: "真实工作 / 生活与成长",
+    title: { wallet: "工作所得，每一笔都有来处。", shop: "用成果换取你的选择。", inventory: "为伙伴准备的小小行囊。", companions: "让工作世界多一份陪伴。" }[panel],
+    render: () => economyUI.render(panel)
+  };
   switch (panel) {
+    case "collection":
+      return { eyebrow: "收藏 / 营地陈列", title: "把值得记住的成果留在身边。", render: snapshot => renderCollection(snapshot, { editable: ui.source === "live" && Boolean(snapshot.collection), busy: ui.savingCollection }) };
     case "artifacts":
       return { eyebrow: "成果 / 真实产出", title: "成果档案", render: snapshot => {
         const artifacts = allArtifacts(snapshot.progressions, snapshot.quests);
@@ -328,6 +397,8 @@ function renderCampPanel(snapshot) {
   const milestones = world.milestones ?? [];
   return `
     <p class="panel-lede">每一次远征都会带回新的收获。营地保存足迹，工作始终属于你。</p>
+    <div class="panel-action-row"><button class="secondary-button" data-panel="collection" type="button">收藏与陈列 · ${snapshot.collection?.grants.length ?? 0}</button></div>
+    <div class="panel-action-row"><button class="secondary-button" data-panel="wallet" type="button">钱包 · ${snapshot.economy?.gold ?? 0} 金币</button><button class="secondary-button" data-panel="shop" type="button">营地商店</button><button class="secondary-button" data-panel="inventory" type="button">背包</button><button class="secondary-button" data-panel="companions" type="button">伙伴小屋</button></div>
     <div class="insight-card">
       <div class="evidence-head"><h3 class="evidence-title">营地记忆</h3><span class="status-badge">本地</span></div>
       <div class="detail-line"><span>纪事中的任务</span><strong>${quests.length}</strong></div>
@@ -353,6 +424,7 @@ function renderGatePanel(snapshot) {
   const { world, quests } = snapshot;
   return `
     <p class="panel-lede">传送门连接本地工具与这个小世界。它只负责观测，不会反向控制工具。</p>
+    ${renderCaptureStatus(snapshot)}
     ${renderGoals(snapshot, "gate")}
     <div class="insight-card">
       <div class="evidence-head"><h3 class="evidence-title">${labelize(world.gate.state)}</h3><span class="confidence-badge verified">只读</span></div>
@@ -566,19 +638,38 @@ function loadingMarkup() {
 function showReturnOverlay(entry) {
   clearTimeout(ui.returnTimer);
   if (refs.returnOverlay.classList.contains("is-hidden")) ui.returnFocus = document.activeElement;
-  const highlights = entry.highlights ?? [];
-  refs.returnTitle.textContent = highlights.some((item) => item.kind === "milestone_unlocked")
+  const grant = entry.collectionGrant ?? null;
+  const income = ui.source === "live" && entry.quest_id ? ui.snapshot?.economy?.history.entries.find(item => item.type === "work_reward" && item.quest_id === entry.quest_id) : null;
+  ui.returnCollection = grant;
+  const highlights = (entry.highlights ?? []).slice(0, 3 - Number(Boolean(grant)) - Number(Boolean(income)));
+  refs.returnTitle.textContent = entry.collectionOnly ? "新收藏已解锁。" : highlights.some((item) => item.kind === "milestone_unlocked")
     ? "世界因你而改变。"
     : "世界记住了你的努力。";
-  refs.returnSubtitle.textContent = `${entry.title ?? "一次有意义的远征"}已回到营地。`;
+  refs.returnSubtitle.textContent = entry.collectionOnly ? "你的首次已验证成果，留下了一份营地纪念。" : `${entry.title ?? "一次有意义的远征"}已回到营地。`;
   refs.returnHighlights.innerHTML = highlights.map((item) => `<div class="return-highlight"><span>${escapeHtml(returnHighlightLabel(item))}</span></div>`).join("");
+  if (grant) refs.returnHighlights.insertAdjacentHTML("beforeend", '<div class="return-highlight"><span>新收藏：验证纪念画 · 已自动收入收藏，尚未改变陈列</span></div>');
+  if (income) refs.returnHighlights.insertAdjacentHTML("beforeend", `<div class="return-highlight"><span>本任务金币 +${Number(income.gold_delta)} · 已入账，可在工作钱包追溯</span></div>`);
+  let collectionButton = document.querySelector("#return-open-collection");
+  if (!collectionButton) {
+    collectionButton = document.createElement("button");
+    collectionButton.id = "return-open-collection";
+    collectionButton.type = "button";
+    collectionButton.className = "secondary-button";
+    collectionButton.textContent = "查看收藏";
+    refs.enterWorld.before(collectionButton);
+  }
+  collectionButton.hidden = !grant;
   refs.returnOverlay.classList.remove("is-hidden");
-  window.setTimeout(() => refs.enterWorld.focus(), 0);
-  ui.returnTimer = window.setTimeout(hideReturnOverlay, 4500);
+  window.setTimeout(() => {
+    if (!refs.returnOverlay.classList.contains("is-hidden")) (grant ? collectionButton : refs.enterWorld).focus();
+  }, 0);
+  if (!grant) ui.returnTimer = window.setTimeout(hideReturnOverlay, 4500);
 }
 
 function hideReturnOverlay() {
   clearTimeout(ui.returnTimer);
+  if (ui.source === "live") collectionNotices.acknowledge(ui.snapshot, ui.returnCollection);
+  ui.returnCollection = null;
   ui.activeReturn = null;
   refs.returnOverlay.classList.add("is-hidden");
   if (ui.returnFocus?.isConnected) ui.returnFocus.focus({ preventScroll: true });
@@ -587,11 +678,14 @@ function hideReturnOverlay() {
 }
 
 function showNextReturn() {
-  if (ui.source !== "live" || document.hidden || ui.activeReturn !== null) return;
-  const next = ui.pendingReturns.shift();
+  if (ui.source !== "live" || document.hidden || ui.activeReturn !== null || ui.pauseReturns) return;
+  const grants = collectionNotices.pending(ui.snapshot);
+  let next = ui.pendingReturns.shift();
+  if (next) next = { ...next, collectionGrant: grants.find(grant => grant.quest_id === next.quest_id) };
+  else if (grants.length) next = { collectionOnly: true, collectionGrant: grants[0] };
   if (!next) return;
   ui.activeReturn = next;
-  ui.seenReturns.add(next.return_id);
+  if (next.return_id) ui.seenReturns.add(next.return_id);
   try { localStorage.setItem("ai-quest-world-seen-returns", JSON.stringify([...ui.seenReturns])); } catch { /* Keep the current session cursor. */ }
   showReturnOverlay(next);
 }
@@ -730,8 +824,11 @@ function initialSource() {
 function setSource(source) {
   pixelComposition.suspend();
   ui.source = source === "demo" ? "demo" : "live";
+  economyUI.update(null, "loading");
   clearTimeout(ui.returnTimer);
   ui.activeReturn = null;
+  ui.returnCollection = null;
+  ui.pauseReturns = false;
   ui.pendingReturns = [];
   refs.returnOverlay.classList.add("is-hidden");
   const url = new URL(window.location.href);

@@ -9,9 +9,10 @@ import { hasSqliteHeader, isProtectedArtifactPath } from "../../packages/adapter
 
 import { createCapabilities } from "../../packages/uarp/capabilities.mjs";
 import { assertRuntimeObserver } from "../../packages/adapter-core/contracts.mjs";
+import { ObservationInterrupted } from "../../packages/adapter-core/observation-interrupted.mjs";
 
 export const CODEX_CLI_ADAPTER_ID = "codex-cli";
-export const CODEX_CLI_ADAPTER_VERSION = "0.1.1";
+export const CODEX_CLI_ADAPTER_VERSION = "0.1.3";
 
 const PRIVACY = Object.freeze({
   content_included: false,
@@ -32,6 +33,7 @@ export class CodexCliHarnessAdapter {
   #runId;
   #workspaceId;
   #projectId;
+  #agentId;
   #extraArgs;
   #ephemeral;
   #clock;
@@ -63,6 +65,7 @@ export class CodexCliHarnessAdapter {
    *   runId?: string,
    *   workspaceId?: string,
    *   projectId?: string,
+   *   agentId?: string,
    *   extraArgs?: string[],
    *   ephemeral?: boolean,
    *   clock?: () => string,
@@ -79,6 +82,7 @@ export class CodexCliHarnessAdapter {
     runId = `codex-cli-${Date.now().toString(36)}`,
     workspaceId,
     projectId,
+    agentId,
     extraArgs = [],
     ephemeral = true,
     clock = () => new Date().toISOString(),
@@ -101,6 +105,8 @@ export class CodexCliHarnessAdapter {
     if (projectId !== undefined) {
       assertNonEmptyString(projectId, "projectId");
     }
+    if (agentId !== undefined) assertNonEmptyString(agentId, "agentId");
+    this.#agentId = agentId;
     if (typeof ephemeral !== "boolean") {
       throw new TypeError("ephemeral must be a boolean");
     }
@@ -213,20 +219,12 @@ export class CodexCliHarnessAdapter {
     this.#streamPhase = "thread";
 
     try {
-      await this.#emit(observer, "run.started", "run.started", {
-        title: this.#title,
-        task_text_available: false,
-        mode: this.#input === null ? "codex-cli" : "codex-cli-stream",
-        ...optionalAttribute("resumed_from_run_id", this.#resumedFromRunId)
-      }, "started");
-
       if (this.#input !== null) {
-        try {
-          this.#lineReader = createInterface({ input: this.#input });
-          await this.#consumeOutput(this.#lineReader, observer);
-        } catch { await this.#emitRuntimeError(observer, "input-stream"); }
-        const outcome = this.#stopRequested ? "cancelled"
-          : this.#threadId !== null && this.#turnCompleted && !this.#hadTurnFailure ? "completed" : "failed";
+        this.#lineReader = createInterface({ input: this.#input });
+        await this.#consumeOutput(this.#lineReader, observer);
+        if (this.#stopRequested) throw new ObservationInterrupted("COLLECTOR_STOPPED");
+        if (!this.#hadTurnFailure && (this.#threadId === null || !this.#turnCompleted)) throw new ObservationInterrupted();
+        const outcome = this.#hadTurnFailure ? "failed" : "completed";
         await this.#emitTerminal(observer, outcome);
         return;
       }
@@ -245,22 +243,20 @@ export class CodexCliHarnessAdapter {
           stdio: ["ignore", "pipe", "pipe"]
         });
       } catch (error) {
-        await this.#emitRuntimeError(observer, "spawn");
-        await this.#emitTerminal(observer, "failed");
-        return;
+        throw new ObservationInterrupted("PROCESS_UNAVAILABLE");
       }
       this.#child = child;
       child.stderr?.resume();
 
       const lineReader = createInterface({ input: child.stdout });
-      const outputPromise = this.#consumeOutput(lineReader, observer);
+      const outputPromise = this.#consumeOutput(lineReader, observer).then(() => null, error => error);
       const result = await waitForExit(child);
-      await outputPromise;
-
-      if (result.error !== null) {
-        await this.#emitRuntimeError(observer, "process");
-      }
-      await this.#emitTerminal(observer, this.#stopRequested ? "cancelled" : result.code === 0 && !this.#hadTurnFailure ? "completed" : "failed");
+      const outputError = await outputPromise;
+      if (outputError) throw outputError;
+      if (this.#stopRequested) throw new ObservationInterrupted("COLLECTOR_STOPPED");
+      if (result.error !== null || result.code === null) throw new ObservationInterrupted("PROCESS_UNAVAILABLE");
+      if (result.code === 0 && !this.#hadTurnFailure && (this.#threadId === null || !this.#turnCompleted)) throw new ObservationInterrupted();
+      await this.#emitTerminal(observer, result.code === 0 && !this.#hadTurnFailure ? "completed" : "failed");
     } finally {
       this.#child = null;
       this.#lineReader = null;
@@ -307,34 +303,39 @@ export class CodexCliHarnessAdapter {
     try {
       message = JSON.parse(line);
     } catch {
-      await this.#emitRuntimeError(observer, `jsonl-${this.#outputSequence}`);
-      return;
+      throw new ObservationInterrupted("STREAM_INVALID");
     }
     if (!isRecord(message) || typeof message.type !== "string") {
-      await this.#emitRuntimeError(observer, `jsonl-${this.#outputSequence}`);
-      return;
+      throw new ObservationInterrupted("STREAM_INVALID");
     }
     if (this.#input !== null && !this.#validPassiveMessage(message)) {
-      await this.#emitRuntimeError(observer, `invalid-record-${this.#outputSequence}`); return;
+      throw new ObservationInterrupted("STREAM_INVALID");
     }
 
     switch (message.type) {
       case "thread.started":
         if (this.#threadId !== null && this.#threadId !== message.thread_id) {
-          await this.#emitRuntimeError(observer, "multiple-threads"); return;
+          throw new ObservationInterrupted("STREAM_INVALID");
         }
         this.#threadId = typeof message.thread_id === "string" ? message.thread_id : null;
+        if (this.#threadId === null) throw new ObservationInterrupted("STREAM_INVALID");
+        await this.#emit(observer, "run.started", "run.started", {
+          title: this.#title,
+          task_text_available: false,
+          mode: this.#input === null ? "codex-cli" : "codex-cli-stream",
+          ...optionalAttribute("resumed_from_run_id", this.#resumedFromRunId)
+        }, "started");
         return;
       case "turn.started":
         this.#turnCount += 1;
-        if (this.#turnCount > 1) await this.#emitRuntimeError(observer, "multiple-turns");
+        if (this.#turnCount > 1) throw new ObservationInterrupted("STREAM_INVALID");
         return;
       case "item.started":
-        if (this.#turnCompleted) { await this.#emitRuntimeError(observer, "post-terminal-item"); return; }
+        if (this.#turnCompleted) throw new ObservationInterrupted("STREAM_INVALID");
         await this.#handleItem(message.item, "started", observer);
         return;
       case "item.completed":
-        if (this.#turnCompleted) { await this.#emitRuntimeError(observer, "post-terminal-item"); return; }
+        if (this.#turnCompleted) throw new ObservationInterrupted("STREAM_INVALID");
         await this.#handleItem(message.item, "completed", observer);
         return;
       case "turn.completed":
@@ -533,7 +534,7 @@ export class CodexCliHarnessAdapter {
         run_id: this.#runId,
         ...(this.#workspaceId === undefined ? {} : { workspace_id: this.#workspaceId }),
         ...(this.#projectId === undefined ? {} : { project_id: this.#projectId }),
-        agent_id: "codex-cli"
+        ...(this.#agentId === undefined ? {} : { agent_id: this.#agentId })
       },
       type,
       attributes,

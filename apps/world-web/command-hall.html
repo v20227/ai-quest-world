@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#071326">
+    <meta name="description" content="AI Quest World local command hall prototype">
+    <title>AI Quest World · Command Hall</title>
+    <link rel="stylesheet" href="/command-hall.css">
+  </head>
+  <body>
+    <div class="command-hall" data-theme="midnight" data-motion="full">
+      <div class="hall-ambient hall-ambient-left" aria-hidden="true"></div>
+      <div class="hall-ambient hall-ambient-right" aria-hidden="true"></div>
+
+      <header class="top-rail">
+        <a class="brand-lockup" href="/" aria-label="返回 AI Quest World 世界场景">
+          <span class="brand-mark">AQ</span>
+          <span class="brand-text">
+            <strong>AI QUEST</strong>
+            <small>WORLD / V0.1</small>
+          </span>
+        </a>
+
+        <div class="top-stats" id="top-stats" aria-label="世界状态"></div>
+
+        <div class="top-actions">
+          <label class="fixture-select">
+            <span>Demo state</span>
+            <select id="fixture-mode" aria-label="选择前端演示状态">
+              <option value="canonical">Verified loop</option>
+              <option value="unverified">Unverified loop</option>
+              <option value="idle">Quiet camp</option>
+            </select>
+          </label>
+          <button class="icon-button" type="button" data-action="theme" aria-label="切换色调">◐</button>
+          <button class="icon-button" type="button" data-action="motion" aria-label="切换动效">✦</button>
+        </div>
+      </header>
+
+      <main class="hall-main">
+        <section class="hall-hero" aria-labelledby="hall-title">
+          <div class="hero-copy">
+            <span class="eyebrow" id="hall-eyebrow">LOCAL COMMAND HALL</span>
+            <h1 id="hall-title">AI Quest World</h1>
+            <p id="hall-subtitle">把真实工作变成一座可以回来的世界。</p>
+          </div>
+          <div class="hero-crest" aria-hidden="true">
+            <span class="crest-star">✦</span>
+            <span class="crest-ring"></span>
+            <span class="crest-label">WORLD<br>STATE</span>
+          </div>
+          <div class="provider-badge">
+            <span class="provider-dot"></span>
+            <span>
+              <strong id="provider-label">LOCAL FIXTURE</strong>
+              <small id="provider-description">前端演示数据 · 后端接口尚未接入</small>
+            </span>
+          </div>
+        </section>
+
+        <section class="hall-grid" aria-label="Command Hall">
+          <aside class="panel roster-panel" id="roster-panel" aria-labelledby="roster-title">
+            <div class="panel-heading">
+              <div>
+                <span class="panel-kicker">OBSERVATION BOARD</span>
+                <h2 id="roster-title">Run Roster <span>/ 运行队列</span></h2>
+              </div>
+              <span class="panel-count" id="roster-count">0 / 4</span>
+            </div>
+            <div class="roster-list" id="roster-list"></div>
+            <div class="roster-note">
+              <span class="note-symbol">↳</span>
+              <span>子运行只归属于根运行，不自动产生独立结算。</span>
+            </div>
+          </aside>
+
+          <section class="main-column" id="quest-panel" aria-labelledby="expedition-title">
+            <article class="panel expedition-panel">
+              <div class="expedition-ribbon">
+                <span id="expedition-eyebrow">MAIN EXPEDITION / TRUSTED LOOP</span>
+                <span class="ribbon-arrow">››</span>
+              </div>
+              <div class="expedition-topline">
+                <div class="expedition-title-block">
+                  <div class="quest-icon" aria-hidden="true"><span>⌘</span></div>
+                  <div>
+                    <span class="section-label" id="expedition-domain">ENGINEERING</span>
+                    <h2 id="expedition-title">Build a resilient event adapter</h2>
+                    <p id="expedition-title-zh">构建可靠的事件适配器</p>
+                  </div>
+                </div>
+                <span class="state-pill" id="expedition-status">RETURNING</span>
+              </div>
+              <p class="expedition-summary" id="expedition-summary"></p>
+
+              <div class="expedition-stats" id="expedition-stats"></div>
+              <div class="reward-row" id="reward-row" aria-label="当前反馈"></div>
+
+              <div class="progress-line">
+                <div class="progress-track"><span id="expedition-progress"></span></div>
+                <div class="progress-caption"><span id="expedition-progress-label">3 / 5 phases</span><strong id="expedition-progress-value">72%</strong></div>
+              </div>
+
+              <div class="flow-heading">
+                <span>Expedition flow / 任务流程</span>
+                <small>factual state only</small>
+              </div>
+              <div class="expedition-flow" id="expedition-flow"></div>
+
+              <div class="evidence-block">
+                <div class="flow-heading">
+                  <span>Evidence ledger / 证据账本</span>
+                  <small id="evidence-count">0 refs</small>
+                </div>
+                <div class="evidence-list" id="evidence-list"></div>
+              </div>
+            </article>
+
+            <article class="panel atlas-panel" id="atlas-panel" aria-labelledby="atlas-title">
+              <div class="panel-heading atlas-heading">
+                <div>
+                  <span class="panel-kicker">PERSISTENT WORLD SCENE</span>
+                  <h2 id="atlas-title">World Atlas <span>/ 世界地图</span></h2>
+                </div>
+                <span class="atlas-coordinates" id="atlas-coordinates">02 / 05</span>
+              </div>
+              <div class="atlas-content">
+                <div class="atlas-map" role="group" aria-label="世界地点选择" id="atlas-map"></div>
+                <div class="atlas-detail">
+                  <div class="atlas-art-frame">
+                    <img src="/assets/pixel/reward-concepts/signal-camp-world-concept.png" alt="小营地与 AI 之门的像素概念图">
+                    <span class="art-stamp">PIXEL<br>WORLD</span>
+                  </div>
+                  <div class="atlas-detail-copy">
+                    <span class="section-label" id="atlas-state">RETURNING</span>
+                    <h3 id="atlas-location-title">AI Gate <span>/ AI 之门</span></h3>
+                    <p id="atlas-location-detail">接收来自 Harness 的事实流。</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <aside class="right-column">
+            <section class="panel domains-panel" id="domains-panel" aria-labelledby="domains-title">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-kicker">READ-ONLY GROWTH MAP</span>
+                  <h2 id="domains-title">Domain Constellation <span>/ 能力星图</span></h2>
+                </div>
+                <span class="panel-level">V0.1</span>
+              </div>
+              <div class="domain-grid" id="domain-grid"></div>
+              <p class="panel-footnote">成长来自真实工作语义，不由 token、调用次数或停留时间直接换算。</p>
+            </section>
+
+            <section class="panel collection-panel" id="collection-panel" aria-labelledby="collection-title">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-kicker">VISUAL COLLECTION</span>
+                  <h2 id="collection-title">Field Kit <span>/ 视觉收藏</span></h2>
+                </div>
+                <span class="panel-level">NO STATS</span>
+              </div>
+              <div class="collection-grid" id="collection-grid"></div>
+              <p class="panel-footnote">服装、装备、伙伴与补给当前只承担视觉表达，不改变数值或流程。</p>
+            </section>
+          </aside>
+        </section>
+      </main>
+
+      <nav class="mobile-nav" aria-label="移动端导航">
+        <button type="button" data-focus="atlas-panel" class="active"><span>⌂</span>World</button>
+        <button type="button" data-focus="quest-panel"><span>⌘</span>Quest</button>
+        <button type="button" data-focus="roster-panel"><span>↳</span>Runs</button>
+        <button type="button" data-focus="collection-panel"><span>✦</span>Vault</button>
+      </nav>
+
+      <div class="hall-toast" id="hall-toast" role="status" aria-live="polite"></div>
+    </div>
+    <script type="module" src="/command-hall.mjs"></script>
+  </body>
+</html>
