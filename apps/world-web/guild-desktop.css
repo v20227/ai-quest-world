@@ -306,3 +306,17 @@ body[data-theme] {
 .earned-companion { position: absolute; left: 4%; bottom: 5%; width: clamp(48px, 6vw, 96px); z-index: 8; padding: 0; border: 0; cursor: pointer; }
 .earned-companion[hidden] { display: none; }
 .earned-companion:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+
+/* 远征足迹：当前阶段呼吸发光，新观测阶段盖章入场 */
+@keyframes phase-breathe { 0%,100% { box-shadow:0 0 5px color-mix(in srgb,var(--cyan) 45%,transparent); } 50% { box-shadow:0 0 15px color-mix(in srgb,var(--cyan) 90%,transparent); } }
+.phase-stamp[aria-current="step"] { animation:phase-breathe 1.8s ease-in-out infinite; }
+@keyframes phase-pop { 0% { transform:scale(.84); filter:brightness(1.8); } 60% { transform:scale(1.07); } 100% { transform:scale(1); filter:brightness(1); } }
+.phase-stamp.phase-pop { animation:phase-pop .5s ease-out; }
+/* 验证进度条：实读平滑增长；远征进行中无数据时流动观测纹理 */
+#board-evidence-progress::-webkit-progress-value { transition:width .7s ease; }
+#board-evidence-progress.is-flowing::-webkit-progress-bar { background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--cyan) 16%,transparent) 0 8px,transparent 8px 16px); animation:evidence-flow 1.2s linear infinite; }
+@keyframes evidence-flow { to { background-position:22.6px 0; } }
+/* 成长星图：数值成长的星位脉冲 */
+@keyframes domain-pulse { 0% { filter:brightness(1); box-shadow:0 0 0 color-mix(in srgb,var(--cyan) 0%,transparent); } 35% { filter:brightness(1.55); box-shadow:0 0 18px color-mix(in srgb,var(--cyan) 85%,transparent); } 100% { filter:brightness(1); box-shadow:0 0 0 transparent; } }
+.domain-node.domain-pulse .pixel-icon { animation:domain-pulse .95s ease-out; border-radius:2px; }
+.reduce-motion .phase-stamp[aria-current="step"],.reduce-motion .phase-stamp.phase-pop,.reduce-motion .domain-node.domain-pulse .pixel-icon,#world-root.reduce-motion #board-evidence-progress.is-flowing::-webkit-progress-bar { animation:none!important; }

@@ -110,11 +110,14 @@ function renderQuestIllustration(snapshot, selectedQuestId, root) {
   if (emblem) emblem.dataset.icon = String(Math.max(0, GUILD_DOMAINS.indexOf(quest?.primary_domain)));
   const progress = root.getElementById("board-evidence-progress");
   const validation = quest?.validation_summary;
+  const liveRun = quest != null && !["COMPLETED", "FAILED", "CANCELLED"].includes(quest.status);
   if (progress) {
     const passed = validation?.latest_passed;
     const total = validation?.latest_total;
     const known = Number.isFinite(passed) && Number.isFinite(total) && total > 0 && passed >= 0 && passed <= total;
-    progress.hidden = !known;
+    // 远征进行中时进度条保持在场：已知证据显示实读比例，未知时以流动纹理表示观测中。
+    progress.hidden = !known && !liveRun;
+    progress.classList.toggle("is-flowing", !known && liveRun);
     if (known) { progress.max = total; progress.value = passed; progress.setAttribute("aria-valuetext", `${passed}/${total} 通过`); }
     else { progress.removeAttribute("value"); progress.removeAttribute("aria-valuetext"); }
   }
@@ -123,7 +126,17 @@ function renderQuestIllustration(snapshot, selectedQuestId, root) {
   const current = quest?.phase ?? null;
   const observed = new Set(quest?.expedition?.observed_phases ?? []);
   const phaseKey = JSON.stringify([quest?.quest_id, current, [...observed]]);
-  if (phases.dataset.phase === phaseKey) return;
+  const previousKey = phases.dataset.phase ?? null;
+  if (phaseKey === previousKey) return;
+  let previousObserved = new Set();
+  let previousCurrent = null;
+  if (previousKey) {
+    try {
+      const [, previousCurrentRaw, ...previousRest] = JSON.parse(previousKey);
+      previousCurrent = previousCurrentRaw;
+      previousObserved = new Set(previousRest[0] ?? []);
+    } catch { /* first render */ }
+  }
   phases.dataset.phase = phaseKey;
   const slots = [
     [current === "DEPART" ? "DEPART" : "EXPLORE", 0],
@@ -132,11 +145,18 @@ function renderQuestIllustration(snapshot, selectedQuestId, root) {
   ];
   phases.replaceChildren(...slots.map(([phase, iconIndex]) => {
     const stamp = root.createElement("span"); stamp.className = "phase-stamp";
+    const state = current === phase ? "当前" : observed.has(phase) ? "已观测" : "—";
     const title = root.createElement("span"); title.textContent = label(phase);
-    const state = root.createElement("small"); state.textContent = current === phase ? "当前" : observed.has(phase) ? "已观测" : "—";
+    const stateNode = root.createElement("small"); stateNode.textContent = state;
     if (current === phase) stamp.setAttribute("aria-current", "step");
     stamp.title = current === phase ? `当前观测：${label(phase)}` : observed.has(phase) ? `${label(phase)}，曾观测到此阶段，不代表任务完成` : `${label(phase)}，尚未观测到`;
-    stamp.append(pixelIcon(root, iconIndex), title, state);
+    stamp.append(pixelIcon(root, iconIndex), title, stateNode);
+    const wasCurrent = previousCurrent === phase;
+    const isNewlyObserved = !previousObserved.has(phase) && observed.has(phase);
+    if (!wasCurrent && (current === phase || isNewlyObserved)) {
+      stamp.classList.add("phase-pop");
+      root.defaultView?.setTimeout(() => stamp.classList.remove("phase-pop"), 600);
+    }
     return stamp;
   }));
 }
@@ -211,13 +231,34 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
   picker.disabled = model.quests.length === 0; picker.value = model.selectedId ?? "";
   for (const [id, value] of Object.entries({ "total-growth": model.totals.xp, "active-expeditions": model.totals.active, "total-quests": model.totals.quests })) root.getElementById(id).textContent = String(value);
   const domains = root.getElementById("domain-grid");
+  const reduceMotion = root.defaultView?.matchMedia("(prefers-reduced-motion: reduce)")?.matches
+    || root.body?.classList.contains("reduce-motion");
   model.domains.forEach((domain, index) => {
     let button = [...domains.children].find(node => node.dataset.domain === domain.name);
     if (!button) {
       button = element("button", "domain-node"); button.type = "button"; button.dataset.domain = domain.name;
       button.append(pixelIcon(root, index, "domain-sigil"), element("strong", "", label(domain.name)), element("small", "")); domains.append(button);
     }
-    button.querySelector("small").textContent = `${domain.value} / 100`;
+    const valueNode = button.querySelector("small");
+    const previous = Number(button.dataset.value ?? "0");
+    const target = domain.value;
+    if (target === previous) { valueNode.textContent = `${target} / 100`; continue; }
+    button.dataset.value = String(target);
+    if (reduceMotion || previous > target) { valueNode.textContent = `${target} / 100`; continue; }
+    // 成长是值得被看见的：数值滚动 + 星位脉冲。
+    button.classList.remove("domain-pulse");
+    void button.offsetWidth;
+    button.classList.add("domain-pulse");
+    root.defaultView?.setTimeout(() => button.classList.remove("domain-pulse"), 1000);
+    const startedAt = performance.now();
+    const duration = 700;
+    const tick = now => {
+      const t = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      valueNode.textContent = `${Math.round(previous + (target - previous) * eased)} / 100`;
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   });
   const artifacts = root.getElementById("desktop-artifacts");
   const retained = new Set();
