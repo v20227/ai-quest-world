@@ -25,6 +25,7 @@ import { parseRolloutSession } from "../../adapters/codex-desktop/replay-session
 const DEFAULT_SETTLE_MINUTES = 15;
 const DEFAULT_POLL_MS = 3000;
 const ACTIVE_PARSE_THROTTLE_MS = 30000;
+const DEFAULT_BACKFILL_MAX_BYTES = 8 * 1024 * 1024;
 const MAX_BUFFER = 64 * 1024 * 1024;
 
 export function startLiveTail({
@@ -106,9 +107,12 @@ export function startLiveTail({
       if (!files.has(filePath)) {
         // Bound the first-run backfill: ancient or oversized history is
         // registered but never parsed or settled. Live mode is for now.
-        if (startedAtMs - info.mtimeMs > backfillMs || info.size > maxFileBytes) {
-          files.set(filePath, { kind, size: info.size, mtimeMs: info.mtimeMs, lastWriteMs: Date.now(), settled: true });
-          if (info.size > maxFileBytes) log(`live-tail skipping oversized history file (${Math.round(info.size / 1024 / 1024)}MB): ${filePath}`);
+        // 归档文件（>6h 未变）用更小的解析预算：它们大多是内容流，价值密度低。
+        const isArchived = startedAtMs - info.mtimeMs > 6 * 60 * 60 * 1000;
+        const budget = isArchived ? Math.min(maxFileBytes, DEFAULT_BACKFILL_MAX_BYTES) : maxFileBytes;
+        if (startedAtMs - info.mtimeMs > backfillMs || info.size > budget) {
+          files.set(filePath, { kind, size: info.size, mtimeMs: info.mtimeMs, lastWriteMs: Date.now(), lastParseMs: 0, settled: true });
+          if (info.size > budget) log(`live-tail skipping oversized history file (${Math.round(info.size / 1024 / 1024)}MB): ${filePath}`);
           continue;
         }
       }
@@ -118,6 +122,8 @@ export function startLiveTail({
       entry.mtimeMs = info.mtimeMs;
       entry.lastWriteMs = Date.now();
       entry.lastParseMs = Date.now();
+      // 让出事件循环：回填几十个会话时 HTTP 不被饿死。
+      await new Promise(resolve => setImmediate(resolve));
     }
   }
 
