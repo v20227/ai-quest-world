@@ -13,18 +13,23 @@ test("desktop selection preserves historical Quest and actual run identities", (
   assert.equal(guildSceneModel(snapshot, "historical").title, "Historical delivery");
   const model = desktopGuildModel(snapshot, "historical");
   assert.equal(model.selectedId, "historical");
-  assert.deepEqual(model.runs.slice(0, snapshot.quests[0].run_ids.length).map(run => run.id), snapshot.quests[0].run_ids);
+  assert.ok(model.runs.some(run => run.id === snapshot.quests[0].root_run_id && run.questId === "historical"));
   assert.equal(model.domains.length, 6);
   for (const domain of model.domains) assert.equal(domain.value, snapshot.world.progression_totals.domain_progress[domain.name]);
 });
 
-test("desktop models do not infer unknown run outcome or parent edges", () => {
+test("desktop roster is present-tense: live expeditions plus latest returns, no run dump", () => {
   const snapshot = buildDemoSnapshot();
   snapshot.world.active_run_ids = [snapshot.quests[0].run_ids[0]];
   const model = desktopGuildModel(snapshot);
   assert.equal(model.runs.find(run => run.id === snapshot.world.active_run_ids[0]).status, "运行中");
-  assert.ok(model.runs.some(run => run.relationship.includes("父级信息未知")));
-  assert.ok(model.runs.filter(run => !snapshot.world.active_run_ids.includes(run.id)).every(run => run.status === "当前未运行 · 结果见任务"));
+  // 只展示根运行，不堆叠子运行；关系描述是事实，不推断父级边
+  for (const run of model.runs) {
+    assert.ok(run.relationship.startsWith("根运行"), run.relationship);
+    assert.ok(["运行中", "进行中", "已归来 · 已完成", "已归来 · 已失败", "已归来 · 已取消"].includes(run.status), run.status);
+  }
+  assert.equal(model.runs.length <= 6, true);
+  assert.equal(model.inFlightCount + model.returnCount, model.runs.length);
 });
 
 test("empty desktop world has no fabricated roster, growth or artifacts", () => {

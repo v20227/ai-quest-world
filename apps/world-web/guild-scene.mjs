@@ -143,20 +143,34 @@ function renderQuestIllustration(snapshot, selectedQuestId, root) {
 
 export function desktopGuildModel(snapshot, selectedQuestId = null) {
   const active = new Set(snapshot.world.active_run_ids ?? []);
-  const quests = recentQuests(snapshot.quests);
-  const selected = quests.find(quest => quest.quest_id === selectedQuestId) ?? currentQuest(quests);
+  const ordered = recentQuests(snapshot.quests);
+  const terminal = new Set(["COMPLETED", "FAILED", "CANCELLED"]);
+  // 远征队伍是现在进行时：正在进行的远征 + 刚归来的最近两趟。
+  // 完整历史在纪事与公会档案里，不在这里堆叠。
+  const inFlight = ordered.filter(quest => !terminal.has(quest.status));
+  const recentReturns = ordered.filter(quest => terminal.has(quest.status)).slice(0, 2);
+  const visible = [...inFlight, ...recentReturns].slice(0, 6);
+  const selected = ordered.find(quest => quest.quest_id === selectedQuestId) ?? currentQuest(ordered);
   return {
     selectedId: selected?.quest_id ?? null,
-    quests: quests.map(quest => ({ id: quest.quest_id, title: quest.title })),
-    runs: quests.flatMap(quest => quest.run_ids.map(id => ({
-      id, questId: quest.quest_id, title: quest.title,
-      relationship: id === quest.root_run_id ? "根运行" : "关联运行 · 父级信息未知",
-      status: active.has(id) ? "运行中" : "当前未运行 · 结果见任务"
-    }))),
+    quests: ordered.map(quest => ({ id: quest.quest_id, title: quest.title })),
+    runs: visible.flatMap(quest => {
+      const root = quest.run_ids.includes(quest.root_run_id) ? quest.root_run_id : quest.run_ids[0];
+      const relationship = quest.run_ids.length > 1 ? `根运行 · 含 ${quest.run_ids.length - 1} 个关联运行` : "根运行";
+      return [{
+        id: root, questId: quest.quest_id, title: quest.title,
+        relationship,
+        status: active.has(root) ? "运行中"
+          : terminal.has(quest.status) ? `已归来 · ${label(quest.status)}`
+          : "进行中"
+      }];
+    }),
+    inFlightCount: inFlight.length,
+    returnCount: recentReturns.length,
     agents: selected?.agent_ids ?? [],
     domains: GUILD_DOMAINS.map(name => ({ name, value: snapshot.world.progression_totals?.domain_progress?.[name] ?? 0 })),
     artifacts: allArtifacts(snapshot.progressions, snapshot.quests),
-    totals: { xp: snapshot.world.progression_totals?.skill_xp ?? 0, active: active.size, quests: quests.length },
+    totals: { xp: snapshot.world.progression_totals?.skill_xp ?? 0, active: active.size, quests: ordered.length },
     validation: selected?.validation_summary ?? null
   };
 }
@@ -188,7 +202,9 @@ function renderDesktopPanels(snapshot, selectedQuestId, root) {
   host.replaceChildren(...(rows.length ? rows : [element("p", "muted", "尚未观测到运行，下一次远征会出现在这里。")]));
   host.scrollTop = scroll;
   if (focusedRun) rows.find(row => row.dataset.selectRun === focusedRun)?.focus({ preventScroll: true });
-  root.getElementById("roster-count").textContent = `${model.runs.length} 次运行`;
+  root.getElementById("roster-count").textContent = model.inFlightCount + model.returnCount > 0
+    ? `进行中 ${model.inFlightCount} · 最新归来 ${model.returnCount}`
+    : "暂无远征";
   root.getElementById("agent-identities").textContent = model.agents.length ? `已观测到的智能体 · ${model.agents.join(" · ")}` : "此任务暂无智能体身份信息。";
   const picker = root.getElementById("quest-picker");
   picker.replaceChildren(...model.quests.map(quest => { const option = element("option", "", quest.title); option.value = quest.id; return option; }));
