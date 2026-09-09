@@ -45,7 +45,7 @@ export class QuestEngine {
     return this.getQuestForRun(event.context.run_id);
   }
 
-  #ingestKnown(input, semanticRecord = null) {
+  #ingestKnown(input, semanticRecord = null, { clone = true } = {}) {
     const event = parseRuntimeEvent(input);
     if (this.#processedEventIds.has(event.event_id)) {
       return null;
@@ -99,9 +99,15 @@ export class QuestEngine {
       quest.difficulty.estimated = estimateDifficulty(state.difficultyBasis);
     }
 
-    const outcome = classifyOutcome(state.events, { rootRunId: state.driver, primaryDomain: quest.primary_domain });
-    quest.validation_summary = outcome.validation_summary;
-    quest.artifact_refs = outcome.artifact_refs;
+    // 结果证据只在验证/产物/结算事件时变化——其余事件不重算（否则随任务增长退化为 O(n²)）。
+    let outcome = null;
+    const affectsOutcome = rootTerminal || state.events.length === 1
+      || event.type.startsWith("validation.") || event.type.startsWith("artifact.");
+    if (affectsOutcome) {
+      outcome = classifyOutcome(state.events, { rootRunId: state.driver, primaryDomain: quest.primary_domain });
+      quest.validation_summary = outcome.validation_summary;
+      quest.artifact_refs = outcome.artifact_refs;
+    }
 
     if (!wasTerminal && rootTerminal) {
       state.terminalEventIds.add(event.event_id);
@@ -130,7 +136,7 @@ export class QuestEngine {
     validateQuest(quest);
     this.#processedEventIds.add(event.event_id);
 
-    return cloneJson(quest);
+    return clone ? cloneJson(quest) : quest;
   }
 
   /**
@@ -155,12 +161,13 @@ export class QuestEngine {
     for (const record of records) {
       this.#semanticHistory.set(record.source_event_id, validateSemanticRecord(record));
     }
-    const touched = [];
+    const touchedStates = new Set();
     for (const input of events) {
-      const quest = this.#ingestKnown(input, this.#semanticHistory.get(parseRuntimeEvent(input).event_id) ?? null);
-      if (quest !== null) touched.push(quest);
+      const quest = this.#ingestKnown(input, this.#semanticHistory.get(parseRuntimeEvent(input).event_id) ?? null, { clone: false });
+      if (quest !== null) touchedStates.add(quest);
     }
-    return touched;
+    // 每个任务只在批次末尾克隆一次——逐事件克隆会让内存分配随任务长度退化为 O(n²)。
+    return [...touchedStates].map(quest => cloneJson(quest));
   }
 
   process(events, semanticRecords = []) {    if (!Array.isArray(events)) {
